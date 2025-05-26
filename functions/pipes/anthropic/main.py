@@ -43,6 +43,10 @@ class Pipe:
             {"id": "claude-3-5-sonnet-latest", "name": "claude-3.5-sonnet"},
             {"id": "claude-3-7-sonnet-20250219", "name": "claude-3.7-sonnet"},
             {"id": "claude-3-7-sonnet-latest", "name": "claude-3.7-sonnet"},
+            {"id": "claude-opus-4-20250514", "name": "claude-opus-4"},
+            {"id": "claude-opus-4-latest", "name": "claude-opus-4"},
+            {"id": "claude-sonnet-4-20250514", "name": "claude-sonnet-4"},
+            {"id": "claude-sonnet-4-latest", "name": "claude-sonnet-4"},
         ]
 
     def pipes(self) -> List[dict]:
