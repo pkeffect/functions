@@ -1,9 +1,9 @@
 """
 title: Anthropic Manifold Pipe
-authors: justinh-rahb and christian-taillon
+authors: justinh-rahb, christian-taillon, jfbloom22
 author_url: https://github.com/justinh-rahb
 funding_url: https://github.com/open-webui
-version: 0.2.5
+version: 0.3.0
 required_open_webui_version: 0.3.17
 license: MIT
 """
@@ -12,7 +12,7 @@ import os
 import requests
 import json
 import time
-from typing import List, Union, Generator, Iterator
+from typing import List, Union, Generator, Iterator, Optional, Dict
 from pydantic import BaseModel, Field
 from open_webui.utils.misc import pop_system_message
 
@@ -29,25 +29,82 @@ class Pipe:
             **{"ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", "")}
         )
         self.MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB per image
-        pass
+        
+        # Model cache
+        self._model_cache: Optional[List[Dict[str, str]]] = None
+        self._model_cache_time: float = 0
+        self._cache_ttl = int(os.getenv("ANTHROPIC_MODEL_CACHE_TTL", "600"))
 
-    def get_anthropic_models(self):
-        return [
-            {"id": "claude-3-haiku-20240307", "name": "claude-3-haiku"},
-            {"id": "claude-3-opus-20240229", "name": "claude-3-opus"},
-            {"id": "claude-3-sonnet-20240229", "name": "claude-3-sonnet"},
-            {"id": "claude-3-5-haiku-20241022", "name": "claude-3.5-haiku"},
-            {"id": "claude-3-5-haiku-latest", "name": "claude-3.5-haiku"},
-            {"id": "claude-3-5-sonnet-20240620", "name": "claude-3.5-sonnet"},
-            {"id": "claude-3-5-sonnet-20241022", "name": "claude-3.5-sonnet"},
-            {"id": "claude-3-5-sonnet-latest", "name": "claude-3.5-sonnet"},
-            {"id": "claude-3-7-sonnet-20250219", "name": "claude-3.7-sonnet"},
-            {"id": "claude-3-7-sonnet-latest", "name": "claude-3.7-sonnet"},
-            {"id": "claude-opus-4-20250514", "name": "claude-opus-4"},
-            {"id": "claude-opus-4-latest", "name": "claude-opus-4"},
-            {"id": "claude-sonnet-4-20250514", "name": "claude-sonnet-4"},
-            {"id": "claude-sonnet-4-latest", "name": "claude-sonnet-4"},
-        ]
+    def get_anthropic_models_from_api(self, force_refresh: bool = False) -> List[Dict[str, str]]:
+        """
+        Retrieve available Anthropic models from the API.
+        Uses caching to reduce API calls.
+
+        Args:
+            force_refresh: Whether to force refreshing the model cache
+
+        Returns:
+            List of dictionaries containing model id and name.
+        """
+        # Check cache first
+        current_time = time.time()
+        if (
+            not force_refresh
+            and self._model_cache is not None
+            and (current_time - self._model_cache_time) < self._cache_ttl
+        ):
+            return self._model_cache
+
+        if not self.valves.ANTHROPIC_API_KEY:
+            return [
+                {
+                    "id": "error",
+                    "name": "ANTHROPIC_API_KEY is not set. Please update the API Key in the valves.",
+                }
+            ]
+
+        try:
+            headers = {
+                "x-api-key": self.valves.ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            }
+            
+            response = requests.get(
+                "https://api.anthropic.com/v1/models",
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"HTTP Error {response.status_code}: {response.text}")
+            
+            data = response.json()
+            models = []
+            
+            for model in data.get("data", []):
+                models.append({
+                    "id": model["id"],
+                    "name": model.get("display_name", model["id"]),
+                })
+            
+            # Update cache
+            self._model_cache = models
+            self._model_cache_time = current_time
+            
+            return models
+            
+        except Exception as e:
+            print(f"Error fetching Anthropic models: {e}")
+            return [
+                {"id": "error", "name": f"Could not fetch models from Anthropic: {str(e)}"}
+            ]
+
+    def get_anthropic_models(self) -> List[Dict[str, str]]:
+        """
+        Get Anthropic models from the API.
+        """
+        return self.get_anthropic_models_from_api()
 
     def pipes(self) -> List[dict]:
         return self.get_anthropic_models()
