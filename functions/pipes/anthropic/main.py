@@ -20,26 +20,20 @@ from open_webui.utils.misc import pop_system_message
 class Pipe:
     class Valves(BaseModel):
         ANTHROPIC_API_KEY: str = Field(default="")
-        MODEL_CACHE_TTL: int = Field(
-            default=int(os.getenv("ANTHROPIC_MODEL_CACHE_TTL", "600")),
-            description="Time in seconds to cache the model list before refreshing",
-        )
 
     def __init__(self):
         self.type = "manifold"
         self.id = "anthropic"
         self.name = "anthropic/"
         self.valves = self.Valves(
-            **{
-                "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", ""),
-                "MODEL_CACHE_TTL": int(os.getenv("ANTHROPIC_MODEL_CACHE_TTL", "600")),
-            }
+            **{"ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY", "")}
         )
         self.MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB per image
         
         # Model cache
         self._model_cache: Optional[List[Dict[str, str]]] = None
         self._model_cache_time: float = 0
+        self._cache_ttl = int(os.getenv("ANTHROPIC_MODEL_CACHE_TTL", "600"))
 
     def get_anthropic_models_from_api(self, force_refresh: bool = False) -> List[Dict[str, str]]:
         """
@@ -57,7 +51,7 @@ class Pipe:
         if (
             not force_refresh
             and self._model_cache is not None
-            and (current_time - self._model_cache_time) < self.valves.MODEL_CACHE_TTL
+            and (current_time - self._model_cache_time) < self._cache_ttl
         ):
             return self._model_cache
 
