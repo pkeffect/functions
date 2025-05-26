@@ -6,7 +6,7 @@ A simple Python interface to interact with Anthropic language models via the Ope
 
 ## Features
 
-- Supports multiple Anthropic models.
+- Supports all available Anthropic models (fetched via API and cached).
 - Handles text and image inputs (with size validation).
 - Supports streaming and non-streaming responses.
 - Easy to configure with your Anthropic API key.
@@ -31,3 +31,4 @@ MIT License
 
 - justinh-rahb ([GitHub](https://github.com/justinh-rahb))
 - christian-taillon
+- jfbloom22 ([GitHub](https://github.com/jfbloom22))
