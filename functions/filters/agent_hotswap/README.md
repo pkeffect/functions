@@ -624,8 +624,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **GitHub Issues** - [Report bugs and request features](https://github.com/pkeffect/agent_hotswap/issues)
-- **Discussions** - [Community support and questions](https://github.com/pkeffect/agent_hotswap/discussions)
+- **GitHub Issues** - [Report bugs and request features](https://github.com/open-webui/functions/issues)
+- **Discussions** - [Community support and questions](https://github.com/open-webui/functions/discussions)
 - **Documentation** - This README and inline code documentation
 
 ---
@@ -635,7 +635,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **🎭 Transform your AI interactions with Agent Hotswap!**
 
 *Seamless persona switching • Rich OpenWebUI integration • Secure & performant*
-
-[⭐ Star on GitHub](https://github.com/pkeffect/agent_hotswap) • [🐛 Report Bug](https://github.com/pkeffect/agent_hotswap/issues) • [💡 Request Feature](https://github.com/pkeffect/agent_hotswap/issues)
 
 </div>

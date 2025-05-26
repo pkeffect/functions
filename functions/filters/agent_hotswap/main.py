@@ -722,7 +722,7 @@ class Filter:
         )
         # Download system configuration
         default_personas_repo: str = Field(
-            default="https://raw.githubusercontent.com/pkeffect/agent_hotswap/refs/heads/main/personas/personas.json",
+            default="https://raw.githubusercontent.com/open-webui/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json",
             description="Default repository URL for persona downloads",
         )
         trusted_domains: str = Field(
