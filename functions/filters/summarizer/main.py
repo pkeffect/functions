@@ -1,11 +1,11 @@
 """
-title: Complete Enhanced Conversation Summarizer Filter
+title: Summarizer Filter
 author: assistant
 author_url: https://github.com/pkeffect
 funding_url: https://github.com/open-webui
 project_url: 
 version: 0.1.0
-description: Full-featured conversation summarizer with model selection, priority control, intelligent detection, caching, and quality improvements.
+description: Full-featured conversation summarizer with model selection, priority control, intelligent detection, caching, and other quality improvements.
 """
 
 from pydantic import BaseModel, Field
