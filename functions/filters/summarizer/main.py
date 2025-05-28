@@ -1,5 +1,5 @@
 """
-title: Summarizer Filter
+title: Summarizer
 author: assistant
 author_url: https://github.com/pkeffect
 funding_url: https://github.com/open-webui
