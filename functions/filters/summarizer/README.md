@@ -1,4 +1,4 @@
-# 📝 Enhanced Conversation Summarizer
+# 📝 Summarizer
 
 > **Intelligent conversation management for Open WebUI with advanced summarization capabilities**
 
