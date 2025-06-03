@@ -14,10 +14,10 @@ This guide shows you how to convert the Gemini LangGraph quickstart to use **Ope
 ## Architecture Overview
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+┌─────────────┐     ┌─────────────┐    ┌─────────────┐
 │  OpenWebUI  │───▶│  Pipeline   │───▶│  LangGraph  │
-│  Interface  │    │  (Bridge)   │    │   Agent     │
-└─────────────┘    └─────────────┘    └─────────────┘
+│  Interface  │     │  (Bridge)   │    │   Agent     │
+└─────────────┘     └─────────────┘    └─────────────┘
         │                  │                  │
         ▼                  ▼                  ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
