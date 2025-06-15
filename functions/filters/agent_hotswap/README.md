@@ -33,8 +33,8 @@ Use this link to install natively: https://openwebui.com/f/pkeffect/agent_hotswa
 
 **Manual Install:**
 1. Copy the complete filter code (main.py)
-2. Add as a new filter in OpenWebUI → Admin Panel → Filters
-3. Enable the filter
+2. Add as a new Function in OpenWebUI → Admin Panel → Functions
+3. Enable the Function (also be sure to enable to Agent Swapper Icon in chat)
 
 ### 2️⃣ Automatic Setup
 The plugin automatically:
