@@ -2,7 +2,7 @@
 title: Agent Hotswap
 author: pkeffect & Claude AI
 author_url: https://github.com/pkeffect
-project_urls: https://github.com/pkeffect/agent_hotswap | https://github.com/open-webui/functions/tree/main/functions/filters/agent_hotswap
+project_urls: https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap | https://github.com/open-webui/functions/tree/main/functions/filters/agent_hotswap | https://openwebui.com/f/pkeffect/agent_hotswap
 funding_url: https://github.com/open-webui
 date: 2025-06-15
 version: 0.1.2
