@@ -5,8 +5,8 @@ author_url: https://github.com/pkeffect
 project_urls: https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap | https://github.com/open-webui/functions/tree/main/functions/filters/agent_hotswap | https://openwebui.com/f/pkeffect/agent_hotswap
 funding_url: https://github.com/open-webui
 date: 2025-06-15
-version: 0.1.2
-description: Switch between AI personas with optimized performance. Features: external config, pre-compiled regex patterns, smart caching, validation, and modular architecture. Commands: !list, !reset, !coder, !writer, etc.
+version: 0.2.0
+description: Universal AI persona switching with dynamic multi-persona support. Features: mid-prompt persona switching, universal persona detection, smart caching, auto-download, and modular architecture. Commands: !list, !reset, !coder, !writer, plus unlimited combinations.
 """
 
 from pydantic import BaseModel, Field
@@ -57,7 +57,7 @@ class PersonaDownloadManager:
 
         try:
             req = urllib.request.Request(
-                download_url, headers={"User-Agent": "OpenWebUI-AgentHotswap/0.1.0"}
+                download_url, headers={"User-Agent": "OpenWebUI-AgentHotswap/0.2.0"}
             )
 
             with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as response:
@@ -195,19 +195,20 @@ class PersonaDownloadManager:
             return {}
 
 
-class PatternCompiler:
-    """Pre-compiles and manages regex patterns for efficient persona detection."""
+class UniversalPatternCompiler:
+    """Enhanced pattern compiler with universal persona detection capabilities."""
 
     def __init__(self, config_valves):
         self.valves = config_valves
         self.persona_patterns = {}
         self.reset_pattern = None
         self.list_pattern = None
+        self.universal_persona_pattern = None
         self._last_compiled_config = None
         self._compile_patterns()
 
     def _compile_patterns(self):
-        """Compile all regex patterns once for reuse."""
+        """Compile all regex patterns once for reuse, including universal detection."""
         try:
             current_config = {
                 "prefix": self.valves.keyword_prefix,
@@ -221,6 +222,12 @@ class PatternCompiler:
 
             prefix_escaped = re.escape(self.valves.keyword_prefix)
             flags = 0 if self.valves.case_sensitive else re.IGNORECASE
+
+            # Compile universal persona detection pattern
+            # Matches: !{word} where word starts with letter, followed by letters/numbers/underscores
+            self.universal_persona_pattern = re.compile(
+                rf"{prefix_escaped}([a-zA-Z][a-zA-Z0-9_]*)\b", flags
+            )
 
             # Compile list command pattern
             list_cmd = self.valves.list_command_keyword
@@ -252,26 +259,39 @@ class PatternCompiler:
         except Exception as e:
             print(f"[PATTERN COMPILER] Error compiling patterns: {e}")
 
-    def get_persona_pattern(self, persona_key: str):
-        """Get or compile a pattern for a specific persona."""
-        if persona_key not in self.persona_patterns:
-            try:
-                prefix_escaped = re.escape(self.valves.keyword_prefix)
-                keyword_check = (
-                    persona_key if self.valves.case_sensitive else persona_key.lower()
-                )
-                flags = 0 if self.valves.case_sensitive else re.IGNORECASE
-                pattern_str = rf"{prefix_escaped}{re.escape(keyword_check)}\b"
-                self.persona_patterns[persona_key] = re.compile(pattern_str, flags)
-            except Exception:
-                return None
+    def discover_all_persona_commands(self, message_content: str) -> List[str]:
+        """
+        Dynamically discover ALL persona commands in content.
+        Works with current 50+ personas AND any future additions.
+        """
+        if not message_content:
+            return []
 
-        return self.persona_patterns[persona_key]
+        self._compile_patterns()
 
-    def detect_keyword(
-        self, message_content: str, available_personas: Dict
-    ) -> Optional[str]:
-        """Efficiently detect persona keywords using pre-compiled patterns."""
+        if not self.universal_persona_pattern:
+            return []
+
+        content_to_check = (
+            message_content if self.valves.case_sensitive else message_content.lower()
+        )
+
+        # Find all persona commands
+        matches = self.universal_persona_pattern.findall(content_to_check)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_personas = []
+        for persona in matches:
+            persona_key = persona if self.valves.case_sensitive else persona.lower()
+            if persona_key not in seen:
+                seen.add(persona_key)
+                unique_personas.append(persona_key)
+
+        return unique_personas
+
+    def detect_special_commands(self, message_content: str) -> Optional[str]:
+        """Detect special commands (list, reset) that take precedence."""
         if not message_content:
             return None
 
@@ -289,13 +309,90 @@ class PatternCompiler:
         if self.reset_pattern and self.reset_pattern.search(content_to_check):
             return "reset"
 
-        # Check persona commands
-        for persona_key in available_personas.keys():
-            pattern = self.get_persona_pattern(persona_key)
-            if pattern and pattern.search(content_to_check):
-                return persona_key
-
         return None
+
+    def parse_multi_persona_sequence(self, content: str) -> Dict:
+        """
+        Parse content with multiple persona switches into structured sequence.
+
+        Input: "!writer do X !teacher do Y !physicist do Z"
+
+        Output: {
+            'is_multi_persona': True,
+            'sequence': [
+                {'persona': 'writer', 'task': 'do X'},
+                {'persona': 'teacher', 'task': 'do Y'},
+                {'persona': 'physicist', 'task': 'do Z'}
+            ],
+            'requested_personas': ['writer', 'teacher', 'physicist']
+        }
+        """
+        if not content:
+            return {"is_multi_persona": False}
+
+        self._compile_patterns()
+
+        if not self.universal_persona_pattern:
+            return {"is_multi_persona": False}
+
+        # Find all persona commands and their positions
+        persona_matches = []
+        for match in self.universal_persona_pattern.finditer(content):
+            persona_key = match.group(1)
+            if not self.valves.case_sensitive:
+                persona_key = persona_key.lower()
+
+            persona_matches.append(
+                {"persona": persona_key, "start": match.start(), "end": match.end()}
+            )
+
+        if len(persona_matches) < 1:
+            return {"is_multi_persona": False}
+
+        # Extract content segments between persona commands
+        sequence = []
+        for i, match in enumerate(persona_matches):
+            # Get content from end of current command to start of next command
+            # (or end of string for last command)
+            task_start = match["end"]
+            task_end = (
+                persona_matches[i + 1]["start"]
+                if i + 1 < len(persona_matches)
+                else len(content)
+            )
+            task_content = content[task_start:task_end].strip()
+
+            # Clean up task content by removing any leading persona commands from next segment
+            if i + 1 < len(persona_matches):
+                # Remove the next persona command if it bleeds into this task
+                next_persona_cmd = (
+                    f"{self.valves.keyword_prefix}{persona_matches[i + 1]['persona']}"
+                )
+                if task_content.endswith(next_persona_cmd):
+                    task_content = task_content[: -len(next_persona_cmd)].strip()
+
+            sequence.append(
+                {
+                    "persona": match["persona"],
+                    "task": (
+                        task_content
+                        if task_content
+                        else "Please introduce yourself and explain your capabilities."
+                    ),
+                }
+            )
+
+        # Get unique personas requested
+        requested_personas = list(
+            dict.fromkeys(match["persona"] for match in persona_matches)
+        )
+
+        return {
+            "is_multi_persona": len(sequence) > 0,
+            "is_single_persona": len(sequence) == 1,
+            "sequence": sequence,
+            "requested_personas": requested_personas,
+        }
 
 
 class SmartPersonaCache:
@@ -369,11 +466,15 @@ class Filter:
             default=False,
             description="Enable performance debugging - logs timing information",
         )
+        multi_persona_transitions: bool = Field(
+            default=True,
+            description="Show transition announcements in multi-persona responses (🎭 **Persona Name**)",
+        )
 
     def __init__(self):
         self.valves = self.Valves()
         self.toggle = True
-        self.icon = """data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNS43NSA1QzE1Ljc1IDMuMzQzIDE0LjQwNyAyIDEyLjc1IDJTOS43NSAzLjM0MyA5Ljc1IDV2MC41QTMuNzUgMy43NSAwIDAgMCAxMy41IDkuMjVjMi4xIDAgMy44MS0xLjc2NyAzLjc1LTMuODZWNVoiLz4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04LjI1IDV2LjVhMy43NSAzLjc1IDAgMCAwIDMuNzUgMy43NWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAxNy4yNSA1djAuNUMxNy4yNSAzLjM0MyAxNS45MDcgMiAxNC4yNSAzczMuNzUgMS4zNDMgMy43NSAzdjAuNUEzLjc1IDMuNzUgMCAwIDAgMjEuNzUgOWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAyMS4yNSA1djAuNSIvPgo8L3N2Zz4="""
+        self.icon = """data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNS43NSA1QzE1Ljc1IDMuMzQzIDE0LjQwNyAyIDEyLjc1IDJTOS43NSAzLjM0MyA5Ljc1IDV2MC41QTMuNzUgMy43NSAwIDAgMCAxMy41IDkuMjVjMi4xIDAgMy44MS0xLjc2NyAzLjc1LTMuODZWNVoiLz4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04LjI1IDV2LjVhMy43NSAzLjc1IDAgMCAwIDMuNzUgMy43NWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAxNy4yNSA1djAuNUMxNy4yNSAzLjM0MyAxNS45MDcgMiAxNC4yNSAyczMuNzUgMS4zNDMgMy43NSAzdjAuNUEzLjc1IDMuNzUgMCAwIDAgMjEuNzUgOWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAyMS4yNSA1djAuNSIvPgo8L3N2Zz4="""
 
         # State management
         self.current_persona = None
@@ -382,7 +483,7 @@ class Filter:
         self.event_emitter_for_close_task = None
 
         # Performance optimization components
-        self.pattern_compiler = PatternCompiler(self.valves)
+        self.pattern_compiler = UniversalPatternCompiler(self.valves)
         self.persona_cache = SmartPersonaCache()
 
         # Download system
@@ -686,21 +787,37 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             print(f"[PERSONA CONFIG] Error loading personas: {e}")
             return self.get_master_controller_persona()
 
-    def _detect_persona_keyword(self, message_content: str) -> Optional[str]:
-        """Efficiently detect persona keywords using pre-compiled patterns."""
-        start_time = time.time() if self.valves.debug_performance else 0
+    def _load_requested_personas_only(self, requested_personas: List[str]) -> Dict:
+        """
+        Load ONLY the personas actually requested in the prompt.
+        Includes validation and graceful error handling.
+        """
+        # Load the full personas database once
+        all_available_personas = self._load_personas()
 
-        if not message_content:
-            return None
+        # Always include Master Controller
+        result = {
+            "_master_controller": all_available_personas.get("_master_controller", {})
+        }
 
-        personas = self._load_personas()
-        result = self.pattern_compiler.detect_keyword(message_content, personas)
+        # Track what we found vs what was requested
+        found_personas = []
+        missing_personas = []
 
-        if self.valves.debug_performance:
-            elapsed = (time.time() - start_time) * 1000
-            self._debug_log(
-                f"_detect_persona_keyword completed in {elapsed:.2f}ms (result: {result})"
-            )
+        for persona_key in requested_personas:
+            if persona_key in all_available_personas:
+                result[persona_key] = all_available_personas[persona_key]
+                found_personas.append(persona_key)
+            else:
+                missing_personas.append(persona_key)
+
+        # Add metadata about the loading process
+        result["_loading_info"] = {
+            "requested": requested_personas,
+            "found": found_personas,
+            "missing": missing_personas,
+            "total_loaded": len(found_personas),
+        }
 
         return result
 
@@ -728,7 +845,75 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
 
         return {"role": "system", "content": system_content}
 
+    def _create_dynamic_multi_persona_system(
+        self, requested_personas: List[str]
+    ) -> Dict:
+        """
+        Build dynamic system message with Master Controller + requested personas.
+        Works with ANY persona combination, current or future.
+        """
+        # Load only the requested personas
+        loaded_personas = self._load_requested_personas_only(requested_personas)
+        loading_info = loaded_personas.pop("_loading_info")
+
+        # Build system message with Master Controller + requested personas
+        master_controller = loaded_personas.get("_master_controller", {})
+        system_content = master_controller.get("prompt", "")
+
+        # Add each successfully loaded persona
+        persona_definitions = []
+        for persona_key in loading_info["found"]:
+            persona_data = loaded_personas[persona_key]
+            persona_name = persona_data.get("name", persona_key.title())
+            persona_prompt = persona_data.get("prompt", "")
+
+            persona_definitions.append(
+                f"""
+=== {persona_name.upper()} PERSONA ===
+Activation Command: !{persona_key}
+{persona_prompt}
+=== END {persona_name.upper()} ===
+"""
+            )
+
+        # Create execution instructions
+        transition_instruction = ""
+        if self.valves.multi_persona_transitions and self.valves.show_persona_info:
+            transition_instruction = '3. Announce switches: "🎭 **[Persona Name]**"'
+        else:
+            transition_instruction = (
+                "3. Switch personas seamlessly without announcements"
+            )
+
+        multi_persona_instructions = f"""
+
+=== DYNAMIC MULTI-PERSONA MODE ===
+Active Personas: {len(loading_info['found'])} loaded on-demand
+
+{(''.join(persona_definitions))}
+
+EXECUTION FRAMEWORK:
+1. Parse user's persona sequence from their original message
+2. When you encounter !{{persona}}, switch to that persona immediately
+{transition_instruction}
+4. Execute the task following each !command until the next !command
+5. Maintain context flow between all switches
+6. Available commands in this session: {', '.join([f'!{p}' for p in loading_info['found']])}
+
+{f"⚠️ Unrecognized commands (will be ignored): {', '.join([f'!{p}' for p in loading_info['missing']])}" if loading_info['missing'] else ""}
+
+Execute the user's multi-persona sequence seamlessly.
+=== END DYNAMIC MULTI-PERSONA MODE ===
+"""
+
+        return {
+            "role": "system",
+            "content": system_content + multi_persona_instructions,
+            "loading_info": loading_info,  # For status messages
+        }
+
     def _remove_keyword_from_message(self, content: str, keyword_found: str) -> str:
+        """Remove persona command keywords from message content."""
         prefix = re.escape(self.valves.keyword_prefix)
         flags = 0 if self.valves.case_sensitive else re.IGNORECASE
 
@@ -751,12 +936,45 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
 
         return content.strip()
 
+    def _build_multi_persona_instructions(
+        self, sequence: List[Dict], personas_data: Dict
+    ) -> str:
+        """
+        Convert parsed sequence into clear LLM instructions.
+        """
+        if not sequence:
+            return "No valid persona sequence found."
+
+        instructions = ["Execute this multi-persona sequence:\n"]
+
+        for i, step in enumerate(sequence, 1):
+            persona_key = step["persona"]
+            task = step["task"]
+            persona_name = personas_data.get(persona_key, {}).get(
+                "name", persona_key.title()
+            )
+
+            instructions.append(
+                f"""
+**Step {i} - {persona_name}:**
+{task}
+"""
+            )
+
+        instructions.append(
+            """
+\nExecute each step in sequence, following the persona switching framework provided."""
+        )
+
+        return "\n".join(instructions)
+
     async def _emit_and_schedule_close(
         self,
         emitter: Callable[[dict], Any],
         description: str,
         status_type: str = "in_progress",
     ):
+        """Emit status message and schedule auto-close."""
         if not emitter or not self.valves.show_persona_info:
             return
 
@@ -780,6 +998,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         asyncio.create_task(self._try_close_message_after_delay(message_id))
 
     async def _try_close_message_after_delay(self, message_id_to_close: str):
+        """Auto-close status message after configured delay."""
         await asyncio.sleep(self.valves.status_message_auto_close_delay_ms / 1000.0)
         if (
             self.event_emitter_for_close_task
@@ -820,6 +1039,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                 and (
                     "🎭 **Active Persona**" in msg.get("content", "")
                     or "=== OPENWEBUI MASTER CONTROLLER ===" in msg.get("content", "")
+                    or "=== DYNAMIC MULTI-PERSONA MODE ===" in msg.get("content", "")
                 )
             )
         ]
@@ -861,7 +1081,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         ]
         reset_cmds_str = ", ".join(reset_cmds_formatted)
 
-        # Return instructions for the LLM to present the table (like the original)
+        # Return instructions for the LLM to present the table
         return (
             f"Please present the following information. First, a Markdown table of available persona commands, "
             f"titled '**Available Personas**'. The table should have columns for 'Command' and 'Name', "
@@ -872,7 +1092,9 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             f"{table_data_str}\n\n"
             f"After the table, please add the following explanation on a new line:\n"
             f"To revert to the default assistant, use one of these commands: {reset_cmds_str}\n\n"
-            f"Ensure the output is only the Markdown table with its title, followed by the reset instructions, all correctly formatted."
+            f"**Multi-Persona Support:** You can now use multiple personas in a single message! "
+            f"Example: `{self.valves.keyword_prefix}writer create a story {self.valves.keyword_prefix}teacher explain the literary techniques {self.valves.keyword_prefix}artist describe visuals`\n\n"
+            f"Ensure the output is properly formatted Markdown."
         )
 
     async def _handle_toggle_off_state(
@@ -938,8 +1160,9 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
 
         for msg_dict in messages:
             msg = dict(msg_dict)
-            if msg.get("role") == "system" and "🎭 **Active Persona**" in msg.get(
-                "content", ""
+            if msg.get("role") == "system" and (
+                "🎭 **Active Persona**" in msg.get("content", "")
+                or "=== DYNAMIC MULTI-PERSONA MODE ===" in msg.get("content", "")
             ):
                 continue
             if (
@@ -968,29 +1191,30 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         )
         return body
 
-    async def _handle_persona_switch_command(
+    async def _handle_single_persona_command(
         self,
-        detected_keyword_key: str,
+        persona_key: str,
         body: Dict,
         messages: List[Dict],
         last_message_idx: int,
         original_content: str,
         __event_emitter__: Callable[[dict], Any],
     ) -> Dict:
-        """Handle persona switching commands like !coder, !writer, etc."""
+        """Handle single persona switching commands like !coder, !writer, etc."""
         personas_data = self._load_personas()
-        if detected_keyword_key not in personas_data:
+        if persona_key not in personas_data:
             return body
 
-        self.current_persona = detected_keyword_key
-        persona_config = personas_data[detected_keyword_key]
+        self.current_persona = persona_key
+        persona_config = personas_data[persona_key]
         temp_messages = []
         user_message_modified = False
 
         for msg_dict in messages:
             msg = dict(msg_dict)
-            if msg.get("role") == "system" and "🎭 **Active Persona**" in msg.get(
-                "content", ""
+            if msg.get("role") == "system" and (
+                "🎭 **Active Persona**" in msg.get("content", "")
+                or "=== DYNAMIC MULTI-PERSONA MODE ===" in msg.get("content", "")
             ):
                 continue
             if (
@@ -999,7 +1223,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                 and msg.get("content", "") == original_content
             ):
                 cleaned_content = self._remove_keyword_from_message(
-                    original_content, detected_keyword_key
+                    original_content, persona_key
                 )
                 intro_request_default = (
                     "Please introduce yourself and explain what you can help me with."
@@ -1024,7 +1248,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                     msg["content"] = intro_request_default
                 else:
                     persona_name_for_prompt = persona_config.get(
-                        "name", detected_keyword_key.title()
+                        "name", persona_key.title()
                     )
                     msg["content"] = (
                         f"Please briefly introduce yourself as {persona_name_for_prompt}. After your introduction, please help with the following: {cleaned_content}"
@@ -1032,16 +1256,77 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                 user_message_modified = True
             temp_messages.append(msg)
 
-        persona_system_msg = self._create_persona_system_message(detected_keyword_key)
+        persona_system_msg = self._create_persona_system_message(persona_key)
         temp_messages.insert(0, persona_system_msg)
         body["messages"] = temp_messages
 
-        persona_display_name = persona_config.get("name", detected_keyword_key.title())
+        persona_display_name = persona_config.get("name", persona_key.title())
         await self._emit_and_schedule_close(
             __event_emitter__,
             f"🎭 Switched to {persona_display_name}",
             status_type="complete",
         )
+        return body
+
+    async def _handle_multi_persona_command(
+        self,
+        sequence_data: Dict,
+        body: Dict,
+        messages: List[Dict],
+        last_message_idx: int,
+        original_content: str,
+        __event_emitter__: Callable[[dict], Any],
+    ) -> Dict:
+        """
+        Handle complex multi-persona sequences.
+        """
+        requested_personas = sequence_data["requested_personas"]
+        sequence = sequence_data["sequence"]
+
+        # Build dynamic system message
+        dynamic_system_result = self._create_dynamic_multi_persona_system(
+            requested_personas
+        )
+        loading_info = dynamic_system_result.pop("loading_info")
+
+        # Remove old persona messages
+        temp_messages = self._remove_persona_system_messages(messages)
+        temp_messages.insert(0, dynamic_system_result)
+
+        # Build instruction content from the sequence
+        all_personas = self._load_personas()
+        instruction_content = self._build_multi_persona_instructions(
+            sequence, all_personas
+        )
+
+        # Update user message with structured instructions
+        temp_messages[last_message_idx + 1][
+            "content"
+        ] = instruction_content  # +1 because we inserted system message
+
+        body["messages"] = temp_messages
+
+        # Update current state for multi-persona
+        if len(loading_info["found"]) == 1:
+            self.current_persona = loading_info["found"][0]
+        else:
+            self.current_persona = f"multi:{':'.join(loading_info['found'])}"
+
+        # Status message
+        if loading_info["found"]:
+            persona_names = []
+            for p in loading_info["found"]:
+                name = all_personas.get(p, {}).get("name", p.title())
+                persona_names.append(name)
+
+            status_msg = f"🎭 Multi-persona sequence: {' → '.join(persona_names)}"
+            if loading_info["missing"]:
+                status_msg += f" | ⚠️ Unknown: {', '.join([f'!{p}' for p in loading_info['missing']])}"
+
+            await self._emit_and_schedule_close(
+                __event_emitter__, status_msg, "complete"
+            )
+
         return body
 
     def _apply_persistent_persona(self, body: Dict, messages: List[Dict]) -> Dict:
@@ -1051,6 +1336,11 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
 
         personas = self._load_personas()
         target_persona = self.current_persona if self.current_persona else None
+
+        # Handle multi-persona persistent state
+        if target_persona and target_persona.startswith("multi:"):
+            # For multi-persona, we don't persist - user needs to issue new commands
+            return body
 
         if not target_persona or target_persona not in personas:
             return body
@@ -1097,7 +1387,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         __event_emitter__: Callable[[dict], Any],
         __user__: Optional[dict] = None,
     ) -> dict:
-        """Main entry point - orchestrates the persona switching flow."""
+        """Main entry point - orchestrates the universal persona switching flow."""
         messages = body.get("messages", [])
         if messages is None:
             messages = []
@@ -1123,18 +1413,17 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         if last_message_idx == -1:
             return self._apply_persistent_persona(body, messages)
 
-        # Detect persona command
-        detected_keyword_key = self._detect_persona_keyword(
+        # Check for special commands first (they take precedence)
+        special_command = self.pattern_compiler.detect_special_commands(
             original_content_of_last_user_msg
         )
 
-        # Route to appropriate command handler
-        if detected_keyword_key:
-            if detected_keyword_key == "list_personas":
+        if special_command:
+            if special_command == "list_personas":
                 return await self._handle_list_personas_command(
                     body, messages, last_message_idx, __event_emitter__
                 )
-            elif detected_keyword_key == "reset":
+            elif special_command == "reset":
                 return await self._handle_reset_command(
                     body,
                     messages,
@@ -1142,10 +1431,28 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                     original_content_of_last_user_msg,
                     __event_emitter__,
                 )
+
+        # Parse for persona sequence (universal detection)
+        sequence_data = self.pattern_compiler.parse_multi_persona_sequence(
+            original_content_of_last_user_msg
+        )
+
+        if sequence_data["is_multi_persona"]:
+            if sequence_data["is_single_persona"]:
+                # Single persona command
+                persona_key = sequence_data["sequence"][0]["persona"]
+                return await self._handle_single_persona_command(
+                    persona_key,
+                    body,
+                    messages,
+                    last_message_idx,
+                    original_content_of_last_user_msg,
+                    __event_emitter__,
+                )
             else:
-                # Handle persona switching command
-                return await self._handle_persona_switch_command(
-                    detected_keyword_key,
+                # Multi-persona sequence
+                return await self._handle_multi_persona_command(
+                    sequence_data,
                     body,
                     messages,
                     last_message_idx,
@@ -1153,7 +1460,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                     __event_emitter__,
                 )
         else:
-            # No command detected, apply persistent persona if active
+            # No persona commands detected, apply persistent persona if active
             return self._apply_persistent_persona(body, messages)
 
     async def outlet(
@@ -1162,6 +1469,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         return body
 
     def get_persona_list(self) -> str:
+        """Get formatted list of available personas for API/external use."""
         personas = self._load_personas()
 
         # Filter out master controller and metadata from user-facing list
@@ -1190,7 +1498,9 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         command_info = (
             f"\n\n**System Commands:**\n"
             f"• {list_command_display} - Lists persona commands and names in a multi-column Markdown table.\n"
-            f"• {reset_keywords_display} - Reset to default assistant behavior (LLM will confirm)."
+            f"• {reset_keywords_display} - Reset to default assistant behavior (LLM will confirm).\n\n"
+            f"**Multi-Persona Support:** Use multiple personas in one message!\n"
+            f"Example: `{self.valves.keyword_prefix}writer story {self.valves.keyword_prefix}teacher explain {self.valves.keyword_prefix}artist visuals`"
         )
 
         if not persona_list_items:
