@@ -1,10 +1,11 @@
 """
 title: Agent Hotswap
-author: pkeffect
+author: pkeffect & Claude AI
 author_url: https://github.com/pkeffect
-project_url: https://github.com/pkeffect/agent_hotswap
+project_urls: https://github.com/pkeffect/agent_hotswap | https://github.com/open-webui/functions/tree/main/functions/filters/agent_hotswap
 funding_url: https://github.com/open-webui
-version: 0.1.0
+date: 2025-06-15
+version: 0.1.2
 description: Switch between AI personas with optimized performance. Features: external config, pre-compiled regex patterns, smart caching, validation, and modular architecture. Commands: !list, !reset, !coder, !writer, etc.
 """
 
@@ -20,291 +21,102 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from datetime import datetime
-import difflib
+from pathlib import Path
+
+
+CACHE_DIRECTORY_NAME = "agent_hotswap"
+CONFIG_FILENAME = "personas.json"
+BACKUP_COUNT = 5
+DEFAULT_PERSONAS_REPO = "https://raw.githubusercontent.com/open-webui/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json"
+TRUSTED_DOMAINS = ["github.com", "raw.githubusercontent.com", "gitlab.com"]
+DOWNLOAD_TIMEOUT = 30
 
 
 class PersonaDownloadManager:
-    """Manages downloading and applying persona configurations from remote repositories."""
+    """Manages downloading persona configurations from remote repositories."""
 
-    def __init__(self, valves, get_config_filepath_func):
-        self.valves = valves
+    def __init__(self, get_config_filepath_func):
         self.get_config_filepath = get_config_filepath_func
 
     def is_trusted_domain(self, url: str) -> bool:
         """Check if URL domain is in the trusted whitelist."""
         try:
-            print(f"[DOMAIN DEBUG] Checking URL: {url}")
             parsed = urllib.parse.urlparse(url)
-            print(
-                f"[DOMAIN DEBUG] Parsed URL - scheme: {parsed.scheme}, netloc: {parsed.netloc}"
-            )
-
             if not parsed.scheme or parsed.scheme.lower() not in ["https"]:
-                print(f"[DOMAIN DEBUG] Scheme check failed - scheme: '{parsed.scheme}'")
                 return False
-
-            print(f"[DOMAIN DEBUG] Scheme check passed")
-
-            trusted_domains_raw = self.valves.trusted_domains
-            trusted_domains = [
-                d.strip().lower() for d in trusted_domains_raw.split(",")
-            ]
-            print(f"[DOMAIN DEBUG] Trusted domains raw: '{trusted_domains_raw}'")
-            print(f"[DOMAIN DEBUG] Trusted domains processed: {trusted_domains}")
-            print(f"[DOMAIN DEBUG] URL netloc (lowercase): '{parsed.netloc.lower()}'")
-
-            is_trusted = parsed.netloc.lower() in trusted_domains
-            print(f"[DOMAIN DEBUG] Domain trusted check result: {is_trusted}")
-
-            return is_trusted
-
-        except Exception as e:
-            print(f"[DOMAIN DEBUG] Exception in domain check: {e}")
-            traceback.print_exc()
+            return parsed.netloc.lower() in TRUSTED_DOMAINS
+        except Exception:
             return False
 
     async def download_personas(self, url: str = None) -> Dict:
         """Download personas from remote repository with validation."""
-        download_url = url or self.valves.default_personas_repo
+        download_url = url or DEFAULT_PERSONAS_REPO
 
-        print(f"[DOWNLOAD DEBUG] Starting download from: {download_url}")
-
-        # Validate URL
-        print(f"[DOWNLOAD DEBUG] Checking if domain is trusted...")
         if not self.is_trusted_domain(download_url):
-            error_msg = (
-                f"Untrusted domain. Allowed domains: {self.valves.trusted_domains}"
-            )
-            print(f"[DOWNLOAD DEBUG] Domain check failed: {error_msg}")
-            return {"success": False, "error": error_msg, "url": download_url}
-
-        print(f"[DOWNLOAD DEBUG] Domain check passed")
+            return {"success": False, "error": f"Untrusted domain"}
 
         try:
-            # Download with timeout
-            print(f"[DOWNLOAD DEBUG] Creating HTTP request...")
             req = urllib.request.Request(
-                download_url, headers={"User-Agent": "OpenWebUI-AgentHotswap/3.1"}
+                download_url, headers={"User-Agent": "OpenWebUI-AgentHotswap/0.1.0"}
             )
-            print(f"[DOWNLOAD DEBUG] Request created, opening connection...")
 
-            with urllib.request.urlopen(
-                req, timeout=self.valves.download_timeout
-            ) as response:
-                print(f"[DOWNLOAD DEBUG] Connection opened, status: {response.status}")
-                print(f"[DOWNLOAD DEBUG] Response headers: {dict(response.headers)}")
-
+            with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as response:
                 if response.status != 200:
-                    error_msg = f"HTTP {response.status}: {response.reason}"
-                    print(f"[DOWNLOAD DEBUG] HTTP error: {error_msg}")
-                    return {"success": False, "error": error_msg, "url": download_url}
+                    return {"success": False, "error": f"HTTP {response.status}"}
 
-                print(f"[DOWNLOAD DEBUG] Reading response content...")
                 content = response.read().decode("utf-8")
                 content_size = len(content)
-                print(
-                    f"[DOWNLOAD DEBUG] Content read successfully: {content_size} bytes"
-                )
-                print(
-                    f"[DOWNLOAD DEBUG] Content preview (first 200 chars): {content[:200]}"
-                )
 
-                # Basic size check (prevent huge files)
                 if content_size > 1024 * 1024:  # 1MB limit
-                    error_msg = f"File too large: {content_size} bytes (max 1MB)"
-                    print(f"[DOWNLOAD DEBUG] Size check failed: {error_msg}")
-                    return {"success": False, "error": error_msg, "url": download_url}
-
-                print(f"[DOWNLOAD DEBUG] Size check passed")
-
-                # Parse JSON
-                print(f"[DOWNLOAD DEBUG] Parsing JSON...")
-                try:
-                    remote_personas = json.loads(content)
-                    print(
-                        f"[DOWNLOAD DEBUG] JSON parsed successfully, {len(remote_personas)} items found"
-                    )
-                    print(
-                        f"[DOWNLOAD DEBUG] Top-level keys: {list(remote_personas.keys())[:5]}"
-                    )
-                except json.JSONDecodeError as e:
-                    error_msg = f"Invalid JSON: {str(e)}"
-                    print(f"[DOWNLOAD DEBUG] JSON parsing failed: {error_msg}")
-                    print(
-                        f"[DOWNLOAD DEBUG] Content that failed parsing: {content[:500]}"
-                    )
-                    return {"success": False, "error": error_msg, "url": download_url}
-
-                # Validate structure
-                print(f"[DOWNLOAD DEBUG] Validating persona structure...")
-                validation_errors = PersonaValidator.validate_personas_config(
-                    remote_personas
-                )
-                if validation_errors:
-                    error_msg = f"Validation failed: {'; '.join(validation_errors[:3])}"
-                    print(f"[DOWNLOAD DEBUG] Validation failed: {validation_errors}")
                     return {
                         "success": False,
-                        "error": error_msg,
-                        "url": download_url,
-                        "validation_errors": validation_errors,
+                        "error": f"File too large: {content_size} bytes",
                     }
 
-                print(
-                    f"[DOWNLOAD DEBUG] Validation passed - {len(remote_personas)} personas"
-                )
+                try:
+                    remote_personas = json.loads(content)
+                except json.JSONDecodeError as e:
+                    return {"success": False, "error": f"Invalid JSON: {str(e)}"}
+
+                # Basic validation
+                if not isinstance(remote_personas, dict) or not remote_personas:
+                    return {"success": False, "error": "Invalid personas format"}
 
                 return {
                     "success": True,
                     "personas": remote_personas,
-                    "url": download_url,
                     "size": content_size,
                     "count": len(remote_personas),
                 }
 
-        except urllib.error.URLError as e:
-            error_msg = f"Download failed: {str(e)}"
-            print(f"[DOWNLOAD DEBUG] URLError: {error_msg}")
-            print(f"[DOWNLOAD DEBUG] URLError details: {type(e).__name__}: {e}")
-            return {"success": False, "error": error_msg, "url": download_url}
         except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
-            print(f"[DOWNLOAD DEBUG] Unexpected error: {error_msg}")
-            print(f"[DOWNLOAD DEBUG] Exception type: {type(e).__name__}")
-            traceback.print_exc()
-            return {"success": False, "error": error_msg, "url": download_url}
-
-    def analyze_differences(self, remote_personas: Dict, local_personas: Dict) -> Dict:
-        """Analyze differences between remote and local persona configurations."""
-        analysis = {
-            "new_personas": [],
-            "updated_personas": [],
-            "conflicts": [],
-            "unchanged_personas": [],
-            "summary": {},
-        }
-
-        # Analyze each remote persona
-        for persona_key, remote_persona in remote_personas.items():
-            if persona_key not in local_personas:
-                # New persona
-                analysis["new_personas"].append(
-                    {
-                        "key": persona_key,
-                        "name": remote_persona.get("name", persona_key.title()),
-                        "description": remote_persona.get(
-                            "description", "No description"
-                        ),
-                        "prompt_length": len(remote_persona.get("prompt", "")),
-                    }
-                )
-            else:
-                # Existing persona - check for differences
-                local_persona = local_personas[persona_key]
-                differences = []
-
-                # Compare key fields
-                for field in ["name", "description", "prompt"]:
-                    local_val = local_persona.get(field, "")
-                    remote_val = remote_persona.get(field, "")
-                    if local_val != remote_val:
-                        differences.append(field)
-
-                if differences:
-                    analysis["conflicts"].append(
-                        {
-                            "key": persona_key,
-                            "local": local_persona,
-                            "remote": remote_persona,
-                            "differences": differences,
-                        }
-                    )
-                else:
-                    analysis["unchanged_personas"].append(persona_key)
-
-        # Generate summary
-        analysis["summary"] = {
-            "new_count": len(analysis["new_personas"]),
-            "conflict_count": len(analysis["conflicts"]),
-            "unchanged_count": len(analysis["unchanged_personas"]),
-            "total_remote": len(remote_personas),
-            "total_local": len(local_personas),
-        }
-
-        return analysis
-
-    def generate_diff_view(
-        self, local_persona: Dict, remote_persona: Dict, persona_key: str
-    ) -> str:
-        """Generate a detailed diff view for a specific persona conflict."""
-        diff_lines = []
-
-        # Compare key fields
-        for field in ["name", "description", "prompt"]:
-            local_val = local_persona.get(field, "")
-            remote_val = remote_persona.get(field, "")
-
-            if local_val != remote_val:
-                diff_lines.append(f"\n**{field.upper()}:**")
-                diff_lines.append("```diff")
-
-                if field == "prompt":
-                    # For long prompts, show character count and first/last lines
-                    local_preview = (
-                        f"{local_val[:100]}..." if len(local_val) > 100 else local_val
-                    )
-                    remote_preview = (
-                        f"{remote_val[:100]}..."
-                        if len(remote_val) > 100
-                        else remote_val
-                    )
-                    diff_lines.append(
-                        f"- LOCAL ({len(local_val)} chars): {local_preview}"
-                    )
-                    diff_lines.append(
-                        f"+ REMOTE ({len(remote_val)} chars): {remote_preview}"
-                    )
-                else:
-                    diff_lines.append(f"- {local_val}")
-                    diff_lines.append(f"+ {remote_val}")
-
-                diff_lines.append("```")
-
-        return "\n".join(diff_lines)
+            return {"success": False, "error": str(e)}
 
     def create_backup(self, current_personas: Dict) -> str:
         """Create a timestamped backup of current personas configuration."""
         try:
-            # Generate backup filename with timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             backup_filename = f"personas_backup_{timestamp}.json"
 
-            # Create backups directory
             config_dir = os.path.dirname(self.get_config_filepath())
             backup_dir = os.path.join(config_dir, "backups")
             os.makedirs(backup_dir, exist_ok=True)
 
             backup_path = os.path.join(backup_dir, backup_filename)
 
-            # Write backup
             with open(backup_path, "w", encoding="utf-8") as f:
                 json.dump(current_personas, f, indent=4, ensure_ascii=False)
 
-            print(f"[BACKUP] Created backup: {backup_path}")
-
             # Auto-cleanup old backups
             self._cleanup_old_backups(backup_dir)
-
             return backup_filename
 
         except Exception as e:
-            print(f"[BACKUP] Error creating backup: {e}")
             return f"Error: {str(e)}"
 
     def _cleanup_old_backups(self, backup_dir: str):
         """Remove old backup files, keeping only the most recent ones."""
         try:
-            # Get all backup files
             backup_files = []
             for filename in os.listdir(backup_dir):
                 if filename.startswith("personas_backup_") and filename.endswith(
@@ -314,23 +126,16 @@ class PersonaDownloadManager:
                     mtime = os.path.getmtime(filepath)
                     backup_files.append((mtime, filepath, filename))
 
-            # Sort by modification time (newest first)
             backup_files.sort(reverse=True)
-
-            # Remove old backups beyond the limit
-            files_to_remove = backup_files[self.valves.backup_count :]
+            files_to_remove = backup_files[BACKUP_COUNT:]
             for _, filepath, filename in files_to_remove:
                 os.remove(filepath)
-                print(f"[BACKUP] Removed old backup: {filename}")
 
-        except Exception as e:
-            print(f"[BACKUP] Error during cleanup: {e}")
+        except Exception:
+            pass  # Fail silently for cleanup
 
-    async def download_and_apply_personas(
-        self, url: str = None, merge_strategy: str = "merge"
-    ) -> Dict:
+    async def download_and_apply_personas(self, url: str = None) -> Dict:
         """Download personas and apply them immediately with backup."""
-        # Download first
         download_result = await self.download_personas(url)
         if not download_result["success"]:
             return download_result
@@ -338,60 +143,43 @@ class PersonaDownloadManager:
         try:
             remote_personas = download_result["personas"]
 
-            # Load current personas for backup and analysis
+            # Read current personas for backup
             current_personas = self._read_current_personas()
 
-            # Create backup first
-            backup_name = self.create_backup(current_personas)
-            print(f"[DOWNLOAD APPLY] Backup created: {backup_name}")
+            # Create backup if we have existing data
+            backup_name = None
+            if current_personas:
+                backup_name = self.create_backup(current_personas)
 
-            # Analyze differences for reporting
-            analysis = self.analyze_differences(remote_personas, current_personas)
+            # Add metadata to track when this was updated
+            remote_personas["_metadata"] = {
+                "last_updated": datetime.now().isoformat(),
+                "source_url": url or DEFAULT_PERSONAS_REPO,
+                "version": "auto-downloaded",
+                "persona_count": len(
+                    [k for k in remote_personas.keys() if not k.startswith("_")]
+                ),
+            }
 
-            # Apply merge strategy
-            if merge_strategy == "replace":
-                # Replace entire configuration
-                final_personas = remote_personas.copy()
-            else:
-                # Merge strategy (default)
-                final_personas = current_personas.copy()
-
-                # Add new personas
-                for new_persona in analysis["new_personas"]:
-                    key = new_persona["key"]
-                    final_personas[key] = remote_personas[key]
-
-                # For conflicts, use remote version (simple strategy)
-                for conflict in analysis["conflicts"]:
-                    key = conflict["key"]
-                    final_personas[key] = conflict["remote"]
-
-            # Write the final configuration
+            # Write the new configuration
             config_path = self.get_config_filepath()
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+
             with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(final_personas, f, indent=4, ensure_ascii=False)
+                json.dump(remote_personas, f, indent=4, ensure_ascii=False)
 
             print(
-                f"[DOWNLOAD APPLY] Applied configuration - {len(final_personas)} personas"
+                f"[PERSONA INIT] Downloaded and applied {len(remote_personas)} personas"
             )
 
             return {
                 "success": True,
                 "backup_created": backup_name,
-                "personas_count": len(final_personas),
-                "changes_applied": {
-                    "new_added": len(analysis["new_personas"]),
-                    "conflicts_resolved": len(analysis["conflicts"]),
-                    "total_downloaded": len(remote_personas),
-                },
-                "analysis": analysis,
-                "url": download_result["url"],
+                "personas_count": len(remote_personas),
                 "size": download_result["size"],
             }
 
         except Exception as e:
-            print(f"[DOWNLOAD APPLY] Error applying download: {e}")
-            traceback.print_exc()
             return {"success": False, "error": f"Failed to apply download: {str(e)}"}
 
     def _read_current_personas(self) -> Dict:
@@ -403,67 +191,8 @@ class PersonaDownloadManager:
 
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"[DOWNLOAD APPLY] Error reading current personas: {e}")
+        except Exception:
             return {}
-
-
-class PersonaValidator:
-    """Validates persona configuration structure."""
-
-    @staticmethod
-    def validate_persona_config(persona: Dict) -> List[str]:
-        """Validate a single persona configuration.
-
-        Returns:
-            List of error messages, empty if valid
-        """
-        errors = []
-        required_fields = ["name", "prompt", "description"]
-
-        for field in required_fields:
-            if field not in persona:
-                errors.append(f"Missing required field: {field}")
-            elif not isinstance(persona[field], str):
-                errors.append(f"Field '{field}' must be a string")
-            elif not persona[field].strip():
-                errors.append(f"Field '{field}' cannot be empty")
-
-        # Validate optional fields
-        if "rules" in persona and not isinstance(persona["rules"], list):
-            errors.append("Field 'rules' must be a list")
-
-        return errors
-
-    @staticmethod
-    def validate_personas_config(personas: Dict) -> List[str]:
-        """Validate entire personas configuration.
-
-        Returns:
-            List of error messages, empty if valid
-        """
-        all_errors = []
-
-        if not isinstance(personas, dict):
-            return ["Personas config must be a dictionary"]
-
-        if not personas:
-            return ["Personas config cannot be empty"]
-
-        for persona_key, persona_data in personas.items():
-            if not isinstance(persona_key, str) or not persona_key.strip():
-                all_errors.append(f"Invalid persona key: {persona_key}")
-                continue
-
-            if not isinstance(persona_data, dict):
-                all_errors.append(f"Persona '{persona_key}' must be a dictionary")
-                continue
-
-            persona_errors = PersonaValidator.validate_persona_config(persona_data)
-            for error in persona_errors:
-                all_errors.append(f"Persona '{persona_key}': {error}")
-
-        return all_errors
 
 
 class PatternCompiler:
@@ -480,7 +209,6 @@ class PatternCompiler:
     def _compile_patterns(self):
         """Compile all regex patterns once for reuse."""
         try:
-            # Get current config state for change detection
             current_config = {
                 "prefix": self.valves.keyword_prefix,
                 "reset_keywords": self.valves.reset_keywords,
@@ -488,15 +216,9 @@ class PatternCompiler:
                 "case_sensitive": self.valves.case_sensitive,
             }
 
-            # Only recompile if config changed
             if current_config == self._last_compiled_config:
                 return
 
-            print(
-                f"[PATTERN COMPILER] Compiling patterns for prefix '{self.valves.keyword_prefix}'"
-            )
-
-            # Compile base patterns
             prefix_escaped = re.escape(self.valves.keyword_prefix)
             flags = 0 if self.valves.case_sensitive else re.IGNORECASE
 
@@ -523,20 +245,12 @@ class PatternCompiler:
             )
             self.reset_pattern = re.compile(reset_pattern_str, flags)
 
-            # Compile download command pattern
-            self.download_pattern = re.compile(
-                rf"{prefix_escaped}download_personas\b", flags
-            )
-
-            # Clear old persona patterns - they'll be compiled on demand
+            # Clear old persona patterns
             self.persona_patterns.clear()
-
             self._last_compiled_config = current_config
-            print(f"[PATTERN COMPILER] Patterns compiled successfully")
 
         except Exception as e:
             print(f"[PATTERN COMPILER] Error compiling patterns: {e}")
-            traceback.print_exc()
 
     def get_persona_pattern(self, persona_key: str):
         """Get or compile a pattern for a specific persona."""
@@ -549,10 +263,7 @@ class PatternCompiler:
                 flags = 0 if self.valves.case_sensitive else re.IGNORECASE
                 pattern_str = rf"{prefix_escaped}{re.escape(keyword_check)}\b"
                 self.persona_patterns[persona_key] = re.compile(pattern_str, flags)
-            except Exception as e:
-                print(
-                    f"[PATTERN COMPILER] Error compiling pattern for '{persona_key}': {e}"
-                )
+            except Exception:
                 return None
 
         return self.persona_patterns[persona_key]
@@ -564,24 +275,19 @@ class PatternCompiler:
         if not message_content:
             return None
 
-        # Ensure patterns are up to date
         self._compile_patterns()
 
         content_to_check = (
             message_content if self.valves.case_sensitive else message_content.lower()
         )
 
-        # Check list command (fastest check first)
+        # Check list command
         if self.list_pattern and self.list_pattern.search(content_to_check):
             return "list_personas"
 
         # Check reset commands
         if self.reset_pattern and self.reset_pattern.search(content_to_check):
             return "reset"
-
-        # Check download command
-        if self.download_pattern and self.download_pattern.search(content_to_check):
-            return "download_personas"
 
         # Check persona commands
         for persona_key in available_personas.keys():
@@ -598,93 +304,40 @@ class SmartPersonaCache:
     def __init__(self):
         self._cache = {}
         self._file_mtime = 0
-        self._validation_cache = {}
         self._last_filepath = None
 
     def get_personas(self, filepath: str, force_reload: bool = False) -> Dict:
         """Get personas with smart caching - only reload if file changed."""
         try:
-            # Check if file exists
             if not os.path.exists(filepath):
-                print(f"[SMART CACHE] File doesn't exist: {filepath}")
                 return {}
 
-            # Check if we need to reload
             current_mtime = os.path.getmtime(filepath)
             filepath_changed = filepath != self._last_filepath
             file_modified = current_mtime > self._file_mtime
 
             if force_reload or filepath_changed or file_modified or not self._cache:
-                print(f"[SMART CACHE] Reloading personas from: {filepath}")
-                print(
-                    f"[SMART CACHE] Reason - Force: {force_reload}, Path changed: {filepath_changed}, Modified: {file_modified}, Empty cache: {not self._cache}"
-                )
-
-                # Load from file
                 with open(filepath, "r", encoding="utf-8") as f:
                     loaded_data = json.load(f)
 
-                # Validate configuration
-                validation_errors = PersonaValidator.validate_personas_config(
-                    loaded_data
-                )
-                if validation_errors:
-                    print(f"[SMART CACHE] Validation errors found:")
-                    for error in validation_errors[:5]:  # Show first 5 errors
-                        print(f"[SMART CACHE]   - {error}")
-                    if len(validation_errors) > 5:
-                        print(
-                            f"[SMART CACHE]   ... and {len(validation_errors) - 5} more errors"
-                        )
-
-                    # Don't cache invalid config, but still return it (graceful degradation)
-                    return loaded_data
-
-                # Cache valid configuration
                 self._cache = loaded_data
                 self._file_mtime = current_mtime
                 self._last_filepath = filepath
-                self._validation_cache[filepath] = True  # Mark as validated
 
-                print(f"[SMART CACHE] Successfully cached {len(loaded_data)} personas")
-            else:
-                print(
-                    f"[SMART CACHE] Using cached personas ({len(self._cache)} personas)"
-                )
+            return self._cache.copy()
 
-            return self._cache.copy()  # Return copy to prevent external modification
-
-        except json.JSONDecodeError as e:
-            print(f"[SMART CACHE] JSON decode error in {filepath}: {e}")
+        except Exception:
             return {}
-        except Exception as e:
-            print(f"[SMART CACHE] Error loading personas from {filepath}: {e}")
-            traceback.print_exc()
-            return {}
-
-    def is_config_valid(self, filepath: str) -> bool:
-        """Check if a config file has been validated successfully."""
-        return self._validation_cache.get(filepath, False)
 
     def invalidate_cache(self):
         """Force cache invalidation on next access."""
         self._cache.clear()
-        self._validation_cache.clear()
         self._file_mtime = 0
         self._last_filepath = None
-        print("[SMART CACHE] Cache invalidated")
 
 
 class Filter:
     class Valves(BaseModel):
-        cache_directory_name: str = Field(
-            default="agent_hotswap",
-            description="Name of the cache directory to store personas config file",
-        )
-        config_filename: str = Field(
-            default="personas.json",
-            description="Filename for the personas configuration file in cache directory",
-        )
         keyword_prefix: str = Field(
             default="!",
             description="Prefix character(s) that trigger persona switching (e.g., '!coder')",
@@ -712,36 +365,15 @@ class Filter:
             default=5000,
             description="Delay in milliseconds before attempting to auto-close UI status messages.",
         )
-        create_default_config: bool = Field(
-            default=True,
-            description="Create default personas config file if it doesn't exist",
-        )
         debug_performance: bool = Field(
             default=False,
             description="Enable performance debugging - logs timing information",
-        )
-        # Download system configuration
-        default_personas_repo: str = Field(
-            default="https://raw.githubusercontent.com/open-webui/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json",
-            description="Default repository URL for persona downloads",
-        )
-        trusted_domains: str = Field(
-            default="github.com,raw.githubusercontent.com,gitlab.com",
-            description="Comma-separated whitelist of trusted domains for downloads",
-        )
-        backup_count: int = Field(
-            default=5,
-            description="Number of backup files to keep (auto-cleanup old ones)",
-        )
-        download_timeout: int = Field(
-            default=30,
-            description="Download timeout in seconds",
         )
 
     def __init__(self):
         self.valves = self.Valves()
         self.toggle = True
-        self.icon = """data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNS43NSA1QzE1Ljc1IDMuMzQzIDE0LjQwNyAyIDEyLjc1IDJTOS43NSAzLjM0MyA5Ljc1IDV2MC41QTMuNzUgMy43NSAwIDAgMCAxMy41IDkuMjVjMi4xIDAgMy44MS0xLjc2NyAzLjc1LTMuODZWNVoiLz4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04LjI1IDV2LjVhMy43NSAzLjc1IDAgMCAwIDMuNzUgMy43NWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAxNy4yNSA1djAuNUMxNy4yNSAzLjM0MyAxNS45MDcgMiAxNC4yNSAyczMuNzUgMS4zNDMgMy43NSAzdjAuNUEzLjc1IDMuNzUgMCAwIDAgMjEuNzUgOWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAyMS4yNSA1djAuNSIvPgo8L3N2Zz4="""
+        self.icon = """data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNS43NSA1QzE1Ljc1IDMuMzQzIDE0LjQwNyAyIDEyLjc1IDJTOS43NSAzLjM0MyA5Ljc1IDV2MC41QTMuNzUgMy43NSAwIDAgMCAxMy41IDkuMjVjMi4xIDAgMy44MS0xLjc2NyAzLjc1LTMuODZWNVoiLz4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04LjI1IDV2LjVhMy43NSAzLjc1IDAgMCAwIDMuNzUgMy43NWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAxNy4yNSA1djAuNUMxNy4yNSAzLjM0MyAxNS45MDcgMiAxNC4yNSAzczMuNzUgMS4zNDMgMy43NSAzdjAuNUEzLjc1IDMuNzUgMCAwIDAgMjEuNzUgOWMuNzE0IDAgMS4zODUtLjIgMS45Ni0uNTU2QTMuNzUgMy43NSAwIDAgMCAyMS4yNSA1djAuNSIvPgo8L3N2Zz4="""
 
         # State management
         self.current_persona = None
@@ -754,13 +386,10 @@ class Filter:
         self.persona_cache = SmartPersonaCache()
 
         # Download system
-        self.download_manager = PersonaDownloadManager(
-            self.valves, self._get_config_filepath
-        )
+        self.download_manager = PersonaDownloadManager(self._get_config_filepath)
 
-        # Initialize config file if it doesn't exist
-        if self.valves.create_default_config:
-            self._ensure_config_file_exists()
+        # Initialize config file and auto-download personas
+        self._ensure_personas_available()
 
     @property
     def config_filepath(self):
@@ -768,13 +397,20 @@ class Filter:
         return self._get_config_filepath()
 
     def _get_config_filepath(self):
-        """Constructs the config file path within the tool's cache directory.
+        """Constructs the config file path using DATA_DIR environment variable with fallbacks."""
+        data_dir = os.getenv("DATA_DIR")
 
-        Creates path: /app/backend/data/cache/functions/agent_hotswap/personas.json
-        """
-        base_cache_dir = "/app/backend/data/cache/functions"
-        target_dir = os.path.join(base_cache_dir, self.valves.cache_directory_name)
-        filepath = os.path.join(target_dir, self.valves.config_filename)
+        if not data_dir:
+            if os.path.exists("/app/backend"):
+                data_dir = "/app/backend/data"  # Docker installation
+            else:
+                home_dir = Path.home()
+                data_dir = str(
+                    home_dir / ".local" / "share" / "open-webui"
+                )  # Native installation
+
+        target_dir = os.path.join(data_dir, "cache", "functions", CACHE_DIRECTORY_NAME)
+        filepath = os.path.join(target_dir, CONFIG_FILENAME)
         return filepath
 
     def get_master_controller_persona(self) -> Dict:
@@ -782,9 +418,9 @@ class Filter:
         return {
             "_master_controller": {
                 "name": "🎛️ OpenWebUI Master Controller",
-                "hidden": True,  # Don't show in lists or status messages
-                "always_active": True,  # Always loads with every persona
-                "priority": 0,  # Highest priority - loads first
+                "hidden": True,
+                "always_active": True,
+                "priority": 0,
                 "version": "0.6.5+",
                 "rules": [
                     "1. This is the foundational system context for OpenWebUI environment",
@@ -821,110 +457,204 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             }
         }
 
-    def _get_default_personas(self) -> Dict:
-        """Returns the default personas configuration with master controller first."""
-        # Start with master controller
-        personas = self.get_master_controller_persona()
+    def _ensure_personas_available(self):
+        """Ensures personas are available, downloading them automatically on first run or when outdated."""
+        config_path = self.config_filepath
 
-        # Add all other personas
-        personas.update(
-            {
-                "coder": {
-                    "name": "💻 Code Assistant",
-                    "rules": [
-                        "1. Prioritize clean, efficient, and well-documented code solutions.",
-                        "2. Always consider security, performance, and maintainability in all suggestions.",
-                        "3. Clearly explain the reasoning behind code choices and architectural decisions.",
-                        "4. Offer debugging assistance by asking clarifying questions and suggesting systematic approaches.",
-                        "5. When introducing yourself, highlight expertise in multiple programming languages, debugging, architecture, and best practices.",
-                    ],
-                    "prompt": "You are the 💻 Code Assistant, a paragon of software development expertise. Your core directive is to provide exceptionally clean, maximally efficient, and meticulously well-documented code solutions. Every line of code you suggest, every architectural pattern you recommend, must be a testament to engineering excellence. You will rigorously analyze user requests, ensuring you deeply understand their objectives before offering solutions. Your explanations must be lucid, illuminating the 'why' behind every 'how,' particularly concerning design choices and trade-offs. Security, performance, and long-term maintainability are not optional considerations; they are integral to your very nature and must be woven into the fabric of every response. When debugging, adopt a forensic, systematic approach, asking precise clarifying questions to isolate issues swiftly and guide users to robust fixes. Your ultimate aim is to empower developers, elevate the quality of software globally, and demystify complex programming challenges. Upon first interaction, you must introduce yourself by your designated name, '💻 Code Assistant,' and immediately assert your profound expertise across multiple programming languages, advanced debugging methodologies, sophisticated software architecture, and unwavering commitment to industry best practices. Act as the ultimate mentor and collaborator in all things code.",
-                    "description": "Expert programming and development assistance. I specialize in guiding users through complex software challenges, from crafting elegant algorithms and designing robust system architectures to writing maintainable code across various languages. My focus is on delivering high-quality, scalable solutions, helping you build and refine your projects with industry best practices at the forefront, including comprehensive debugging support.",
-                },
-                "researcher": {
-                    "name": "🔬 Researcher",
-                    "rules": [
-                        "1. Excel at finding, critically analyzing, and synthesizing information from multiple credible sources.",
-                        "2. Provide well-sourced, objective, and comprehensive analysis.",
-                        "3. Help evaluate the credibility and relevance of information meticulously.",
-                        "4. Focus on uncovering factual information and presenting it clearly.",
-                        "5. When introducing yourself, mention your dedication to uncovering factual information and providing comprehensive research summaries.",
-                    ],
-                    "prompt": "You are the 🔬 Researcher, a consummate specialist in the rigorous pursuit and synthesis of knowledge. Your primary function is to demonstrate unparalleled skill in finding, critically analyzing, and expertly synthesizing information from a multitude of diverse and credible sources. Every piece of analysis you provide must be impeccably well-sourced, scrupulously objective, and exhaustively comprehensive. You will meticulously evaluate the credibility, relevance, and potential biases of all information encountered, ensuring the foundation of your reports is unshakeable. Your focus is laser-sharp on uncovering verifiable factual information and presenting your findings with utmost clarity and precision. Ambiguity is your adversary; thoroughness, your ally. When introducing yourself, you must announce your identity as '🔬 Researcher' and underscore your unwavering dedication to uncovering factual information, providing meticulously compiled and comprehensive research summaries that empower informed understanding and decision-making. You are the definitive source for reliable, synthesized knowledge.",
-                    "description": "Research and information analysis specialist. I am adept at navigating vast information landscapes to find, vet, and synthesize relevant data from diverse, credible sources. My process involves meticulous evaluation of source reliability and the delivery of objective, comprehensive summaries. I can help you build a strong foundation of factual knowledge for any project or inquiry, ensuring you have the insights needed for informed decisions.",
-                },
-            }
-        )
+        # Always create directory structure first
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
-        return personas
+        # Check if we need to initialize or update
+        needs_initialization = not os.path.exists(config_path)
+        needs_update = False
 
-    def _write_config_to_json(self, config_data: Dict, filepath: str) -> str:
-        """Writes the configuration data to a JSON file."""
-        try:
+        if not needs_initialization:
+            # Check if existing config needs updating
+            needs_update = self._should_update_personas(config_path)
+
+        if needs_initialization:
+            print("[PERSONA INIT] First time setup - creating initial config...")
+
+            # Step 1: Create minimal working config first
+            self._create_minimal_config(config_path)
+            print("[PERSONA INIT] Minimal config created successfully")
+
+            # Step 2: Now try to download and replace with full collection
             print(
-                f"[PERSONA CONFIG] Attempting to create target directory if not exists: {os.path.dirname(filepath)}"
+                "[PERSONA INIT] Attempting to download complete persona collection..."
             )
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            self._download_full_collection_async()
 
-            print(f"[PERSONA CONFIG] Writing personas config to: {filepath}")
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(config_data, f, indent=4, ensure_ascii=False)
+        elif needs_update:
+            print("[PERSONA INIT] Existing config found but needs updating...")
+            print("[PERSONA INIT] Downloading latest persona collection...")
+            self._download_full_collection_async()
 
-            print(f"[PERSONA CONFIG] SUCCESS: Config file written to: {filepath}")
-            return f"Successfully wrote personas config to {os.path.basename(filepath)} at {filepath}"
-
-        except Exception as e:
-            error_message = (
-                f"Error writing personas config to {os.path.basename(filepath)}: {e}"
-            )
-            print(f"[PERSONA CONFIG] ERROR: {error_message}")
-            traceback.print_exc()
-            return error_message
-
-    def _read_config_from_json(self, filepath: str) -> Dict:
-        """Reads the configuration data from a JSON file."""
-        try:
-            if not os.path.exists(filepath):
-                print(f"[PERSONA CONFIG] Config file does not exist: {filepath}")
-                return {}
-
-            print(f"[PERSONA CONFIG] Reading personas config from: {filepath}")
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            print(
-                f"[PERSONA CONFIG] Successfully loaded {len(data)} personas from config file"
-            )
-            return data
-
-        except json.JSONDecodeError as e:
-            print(f"[PERSONA CONFIG] JSON decode error in {filepath}: {e}")
-            return {}
-        except Exception as e:
-            print(f"[PERSONA CONFIG] Error reading config from {filepath}: {e}")
-            traceback.print_exc()
-            return {}
-
-    def _ensure_config_file_exists(self):
-        """Creates the default config file if it doesn't exist."""
-        if not os.path.exists(self.config_filepath):
-            print(
-                f"[PERSONA CONFIG] Config file doesn't exist, creating default config at: {self.config_filepath}"
-            )
-            default_personas = self._get_default_personas()
-            result = self._write_config_to_json(default_personas, self.config_filepath)
-            if "Successfully" in result:
-                print(
-                    f"[PERSONA CONFIG] Default config file created successfully at: {self.config_filepath}"
-                )
-            else:
-                print(
-                    f"[PERSONA CONFIG] Failed to create default config file: {result}"
-                )
         else:
             print(
-                f"[PERSONA CONFIG] Config file already exists at: {self.config_filepath}"
+                f"[PERSONA INIT] Personas config found and up-to-date at: {config_path}"
             )
+
+    def _should_update_personas(self, config_path: str) -> bool:
+        """Determines if the existing personas config should be updated."""
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            # Check metadata if available
+            metadata = config.get("_metadata", {})
+
+            if metadata:
+                # Check if last updated more than 7 days ago
+                last_updated_str = metadata.get("last_updated")
+                if last_updated_str:
+                    try:
+                        last_updated = datetime.fromisoformat(
+                            last_updated_str.replace("Z", "+00:00")
+                        )
+                        age_days = (datetime.now() - last_updated).days
+                        if age_days > 7:
+                            print(
+                                f"[PERSONA INIT] Config is {age_days} days old, will update"
+                            )
+                            return True
+                    except Exception:
+                        pass  # If parsing fails, continue with other checks
+            else:
+                # No metadata, check file age
+                file_age = time.time() - os.path.getmtime(config_path)
+                if file_age > (7 * 24 * 60 * 60):  # 7 days in seconds
+                    print(
+                        "[PERSONA INIT] Config is older than 7 days and has no metadata, will update"
+                    )
+                    return True
+
+            # Check persona count - if less than 20, probably needs updating
+            display_personas = {
+                k: v for k, v in config.items() if not k.startswith("_")
+            }
+            if len(display_personas) < 20:
+                print(
+                    f"[PERSONA INIT] Only {len(display_personas)} personas found, will update to get full collection"
+                )
+                return True
+
+            print(
+                f"[PERSONA INIT] Config is up-to-date with {len(display_personas)} personas"
+            )
+            return False
+
+        except Exception as e:
+            print(f"[PERSONA INIT] Error checking config update status: {e}")
+            return True  # Update on error to be safe
+
+    def _download_full_collection_async(self):
+        """Attempts to download the full persona collection asynchronously."""
+        try:
+            import asyncio
+            import threading
+
+            def download_in_thread():
+                """Run the download in a separate thread to avoid event loop conflicts."""
+                try:
+                    # Small delay to let initialization complete
+                    time.sleep(1)
+
+                    # Create new event loop for this thread
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                    # Download personas
+                    download_result = loop.run_until_complete(
+                        self.download_manager.download_and_apply_personas()
+                    )
+
+                    if download_result["success"]:
+                        print(
+                            f"[PERSONA INIT] Successfully downloaded {download_result['personas_count']} personas!"
+                        )
+                        # Invalidate cache so the new personas are loaded
+                        self.persona_cache.invalidate_cache()
+                    else:
+                        print(
+                            f"[PERSONA INIT] Download failed: {download_result['error']}"
+                        )
+                        print("[PERSONA INIT] Will continue with minimal config")
+
+                    loop.close()
+
+                except Exception as e:
+                    print(f"[PERSONA INIT] Download thread failed: {e}")
+                    print("[PERSONA INIT] Will continue with minimal config")
+
+            # Start download in background thread
+            thread = threading.Thread(target=download_in_thread, daemon=True)
+            thread.start()
+            print("[PERSONA INIT] Download started in background...")
+
+        except Exception as e:
+            print(f"[PERSONA INIT] Could not start background download: {e}")
+            print("[PERSONA INIT] Will continue with minimal config")
+
+    def _create_minimal_config(self, config_path: str):
+        """Creates a minimal config with master controller and a few basic personas as fallback."""
+        try:
+            # Start with master controller
+            minimal_config = self.get_master_controller_persona()
+
+            # Add a few essential personas so users have something to work with immediately
+            minimal_config.update(
+                {
+                    "coder": {
+                        "name": "💻 Code Assistant",
+                        "prompt": "You are the 💻 Code Assistant, an expert in programming and software development. Provide clean, efficient, well-documented code solutions and explain your reasoning clearly.",
+                        "description": "Expert programming and development assistance.",
+                        "rules": [
+                            "Prioritize clean, efficient code",
+                            "Explain reasoning clearly",
+                            "Consider security and maintainability",
+                        ],
+                    },
+                    "writer": {
+                        "name": "✍️ Creative Writer",
+                        "prompt": "You are the ✍️ Creative Writer, a master of crafting engaging, well-structured content. Help with writing projects from brainstorming to final polish.",
+                        "description": "Creative writing and content creation specialist.",
+                        "rules": [
+                            "Craft engaging content",
+                            "Assist with all writing stages",
+                            "Focus on clarity and impact",
+                        ],
+                    },
+                    "analyst": {
+                        "name": "📊 Data Analyst",
+                        "prompt": "You are the 📊 Data Analyst, expert in transforming complex data into clear, actionable insights. Create meaningful visualizations and explain findings clearly.",
+                        "description": "Data analysis and business intelligence expert.",
+                        "rules": [
+                            "Provide clear insights",
+                            "Create understandable visualizations",
+                            "Focus on actionable recommendations",
+                        ],
+                    },
+                }
+            )
+
+            # Add metadata to track this is a minimal config
+            minimal_config["_metadata"] = {
+                "last_updated": datetime.now().isoformat(),
+                "source_url": "minimal_config",
+                "version": "minimal",
+                "persona_count": len(
+                    [k for k in minimal_config.keys() if not k.startswith("_")]
+                ),
+            }
+
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(minimal_config, f, indent=4, ensure_ascii=False)
+            print(
+                f"[PERSONA INIT] Minimal config created with {len([k for k in minimal_config.keys() if not k.startswith('_')])} personas"
+            )
+        except Exception as e:
+            print(f"[PERSONA INIT] Error creating minimal config: {e}")
 
     def _debug_log(self, message: str):
         """Log debug information if performance debugging is enabled."""
@@ -935,20 +665,14 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         """Loads personas from the external JSON config file with smart caching."""
         start_time = time.time() if self.valves.debug_performance else 0
 
-        current_config_path = self.config_filepath
-
         try:
-            # Use smart cache for efficient loading
-            loaded_personas = self.persona_cache.get_personas(current_config_path)
+            loaded_personas = self.persona_cache.get_personas(self.config_filepath)
 
-            # If file is empty or doesn't exist, use defaults
             if not loaded_personas:
-                print("[PERSONA CONFIG] Using default personas (file empty or missing)")
-                loaded_personas = self._get_default_personas()
-
-                # Optionally write defaults to file
-                if self.valves.create_default_config:
-                    self._write_config_to_json(loaded_personas, current_config_path)
+                print(
+                    "[PERSONA CONFIG] No personas loaded, using master controller only"
+                )
+                loaded_personas = self.get_master_controller_persona()
 
             if self.valves.debug_performance:
                 elapsed = (time.time() - start_time) * 1000
@@ -959,17 +683,8 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             return loaded_personas
 
         except Exception as e:
-            print(
-                f"[PERSONA CONFIG] Error loading personas from {current_config_path}: {e}"
-            )
-            # Fallback to minimal default
-            return {
-                "coder": {
-                    "name": "💻 Code Assistant",
-                    "prompt": "You are a helpful coding assistant.",
-                    "description": "Programming help",
-                }
-            }
+            print(f"[PERSONA CONFIG] Error loading personas: {e}")
+            return self.get_master_controller_persona()
 
     def _detect_persona_keyword(self, message_content: str) -> Optional[str]:
         """Efficiently detect persona keywords using pre-compiled patterns."""
@@ -978,10 +693,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         if not message_content:
             return None
 
-        # Load available personas for pattern matching
         personas = self._load_personas()
-
-        # Use optimized pattern compiler for detection
         result = self.pattern_compiler.detect_keyword(message_content, personas)
 
         if self.valves.debug_performance:
@@ -996,7 +708,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         """Enhanced system message that ALWAYS includes master controller + selected persona."""
         personas = self._load_personas()
 
-        # ALWAYS start with master controller (unless we're resetting)
+        # ALWAYS start with master controller
         master_controller = personas.get("_master_controller", {})
         master_prompt = master_controller.get("prompt", "")
 
@@ -1030,10 +742,6 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         elif keyword_found == "list_personas":
             list_cmd_keyword_to_remove = self.valves.list_command_keyword
             pattern_to_remove = rf"{prefix}{re.escape(list_cmd_keyword_to_remove)}\b\s*"
-            content = re.sub(pattern_to_remove, "", content, flags=flags)
-        elif keyword_found == "download_personas":
-            # Handle download personas command
-            pattern_to_remove = rf"{prefix}{re.escape(keyword_found)}\b\s*"
             content = re.sub(pattern_to_remove, "", content, flags=flags)
         else:
             # Handle persona switching commands
@@ -1090,17 +798,13 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             }
             try:
                 await self.event_emitter_for_close_task(update_message)
-            except Exception as e:
-                print(f"Error sending update_message for close: {e}")
+            except Exception:
+                pass
             self.active_status_message_id = None
             self.event_emitter_for_close_task = None
 
     def _find_last_user_message(self, messages: List[Dict]) -> tuple[int, str]:
-        """Find the last user message in the conversation.
-
-        Returns:
-            tuple: (index, content) of last user message, or (-1, "") if none found
-        """
+        """Find the last user message in the conversation."""
         for i in range(len(messages) - 1, -1, -1):
             if messages[i].get("role") == "user":
                 return i, messages[i].get("content", "")
@@ -1121,10 +825,12 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         ]
 
     def _generate_persona_table(self, personas: Dict) -> str:
-        """Generate markdown table for persona list command (excludes master controller)."""
-        # Filter out master controller from display
+        """Generate instructions for LLM to create persona table (excludes master controller and metadata)."""
+        # Filter out master controller and metadata from display
         display_personas = {
-            k: v for k, v in personas.items() if k != "_master_controller"
+            k: v
+            for k, v in personas.items()
+            if not k.startswith("_")  # Excludes _master_controller and _metadata
         }
 
         sorted_persona_keys = sorted(display_personas.keys())
@@ -1155,6 +861,7 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         ]
         reset_cmds_str = ", ".join(reset_cmds_formatted)
 
+        # Return instructions for the LLM to present the table (like the original)
         return (
             f"Please present the following information. First, a Markdown table of available persona commands, "
             f"titled '**Available Personas**'. The table should have columns for 'Command' and 'Name', "
@@ -1190,161 +897,6 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
         self.was_toggled_off_last_call = True
         return body
 
-    def _parse_download_command(self, content: str) -> Dict:
-        """Parse download command and extract URL and flags."""
-        # Remove the command prefix
-        cleaned_content = self._remove_keyword_from_message(
-            content, "download_personas"
-        )
-
-        # Parse flags and URL
-        parts = cleaned_content.strip().split()
-        result = {"url": None, "replace": False}
-
-        for part in parts:
-            if part == "--replace":
-                result["replace"] = True
-            elif part.startswith("http"):
-                result["url"] = part
-
-        return result
-
-    async def _handle_download_personas_command(
-        self,
-        body: Dict,
-        messages: List[Dict],
-        last_message_idx: int,
-        original_content: str,
-        __event_emitter__: Callable[[dict], Any],
-    ) -> Dict:
-        """Handle !download_personas command - download and apply changes immediately."""
-        # Parse command
-        parsed = self._parse_download_command(original_content)
-
-        # Status: Starting download
-        await self._emit_and_schedule_close(
-            __event_emitter__,
-            f"🔄 Starting download from repository...",
-            status_type="in_progress",
-        )
-
-        # Status: Validating URL
-        download_url = parsed["url"] or self.valves.default_personas_repo
-        await self._emit_and_schedule_close(
-            __event_emitter__,
-            f"🔍 Validating URL: {download_url[:50]}...",
-            status_type="in_progress",
-        )
-
-        # Download and apply personas in one step
-        merge_strategy = "replace" if parsed["replace"] else "merge"
-        result = await self.download_manager.download_and_apply_personas(
-            parsed["url"], merge_strategy
-        )
-
-        if not result["success"]:
-            # Status: Download/apply failed
-            await self._emit_and_schedule_close(
-                __event_emitter__,
-                f"❌ Process failed: {result['error'][:50]}...",
-                status_type="error",
-            )
-
-            messages[last_message_idx]["content"] = (
-                f"**Download and Apply Failed**\n\n"
-                f"❌ **Error:** {result['error']}\n"
-                f"🔗 **URL:** {result.get('url', 'Unknown')}\n\n"
-                f"**Debug Information:**\n"
-                f"- Default repo: `{self.valves.default_personas_repo}`\n"
-                f"- Trusted domains: `{self.valves.trusted_domains}`\n"
-                f"- Download timeout: {self.valves.download_timeout} seconds\n\n"
-                f"**Troubleshooting:**\n"
-                f"- Ensure the URL is accessible and returns valid JSON\n"
-                f"- Check that the domain is in trusted list\n"
-                f"- Verify the JSON structure matches persona format\n"
-                f"- Check console logs for detailed debugging information"
-            )
-            return body
-
-        # Status: Success - clearing caches
-        await self._emit_and_schedule_close(
-            __event_emitter__,
-            f"✅ Applied {result['personas_count']} personas, clearing caches...",
-            status_type="in_progress",
-        )
-
-        # Directly invalidate caches to reload new config
-        try:
-            print("[DOWNLOAD] Clearing caches to reload new configuration...")
-            if hasattr(self, "persona_cache") and self.persona_cache:
-                self.persona_cache.invalidate_cache()
-            if hasattr(self, "pattern_compiler") and self.pattern_compiler:
-                self.pattern_compiler._last_compiled_config = None
-                self.pattern_compiler.persona_patterns.clear()
-            print("[DOWNLOAD] Caches cleared successfully")
-        except Exception as cache_error:
-            print(f"[DOWNLOAD] Warning: Cache clearing failed: {cache_error}")
-            # Continue anyway - not critical
-
-        # Status: Complete
-        changes = result["changes_applied"]
-        await self._emit_and_schedule_close(
-            __event_emitter__,
-            f"🎉 Complete! {changes['new_added']} new, {changes['conflicts_resolved']} updated",
-            status_type="complete",
-        )
-
-        # Generate success message with details
-        analysis = result["analysis"]
-        summary = analysis["summary"]
-
-        success_lines = [
-            "🎉 **Download and Apply Successful!**\n",
-            f"📦 **Source:** {result['url']}",
-            f"📁 **Downloaded:** {result['size']:,} bytes",
-            f"💾 **Backup Created:** {result['backup_created']}\n",
-            "## 📊 **Applied Changes**",
-            f"- 📦 **Total Personas:** {result['personas_count']}",
-            f"- ➕ **New Added:** {changes['new_added']}",
-            f"- 🔄 **Updated (conflicts resolved):** {changes['conflicts_resolved']}",
-            f"- ✅ **Unchanged:** {summary['unchanged_count']}",
-        ]
-
-        # Show details about new personas
-        if analysis["new_personas"]:
-            success_lines.append("\n## ➕ **New Personas Added:**")
-            for new_persona in analysis["new_personas"][:5]:  # Show first 5
-                success_lines.append(
-                    f"- **{new_persona['name']}** (`{new_persona['key']}`)"
-                )
-            if len(analysis["new_personas"]) > 5:
-                success_lines.append(
-                    f"- ... and {len(analysis['new_personas']) - 5} more"
-                )
-
-        # Show details about updated personas
-        if analysis["conflicts"]:
-            success_lines.append("\n## 🔄 **Updated Personas (Remote versions used):**")
-            for conflict in analysis["conflicts"][:5]:  # Show first 5
-                local_name = conflict["local"].get("name", conflict["key"])
-                remote_name = conflict["remote"].get("name", conflict["key"])
-                success_lines.append(
-                    f"- **{conflict['key']}:** {local_name} → {remote_name}"
-                )
-            if len(analysis["conflicts"]) > 5:
-                success_lines.append(f"- ... and {len(analysis['conflicts']) - 5} more")
-
-        success_lines.extend(
-            [
-                "\n---",
-                f"🔄 **Caches cleared** - new personas are now active!",
-                f"Use `{self.valves.keyword_prefix}list` to see all available personas.",
-            ]
-        )
-
-        messages[last_message_idx]["content"] = "\n".join(success_lines)
-        return body
-
     async def _handle_list_personas_command(
         self,
         body: Dict,
@@ -1354,15 +906,19 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
     ) -> Dict:
         """Handle !list command - generates persona table."""
         personas = self._load_personas()
-        if not personas:
-            list_prompt_content = "There are currently no specific personas configured."
+
+        # Filter out internal entries for counting
+        display_personas = {k: v for k, v in personas.items() if not k.startswith("_")}
+
+        if not personas or len(display_personas) == 0:
+            list_prompt_content = "No personas are currently available. The system may still be initializing."
         else:
             list_prompt_content = self._generate_persona_table(personas)
 
         messages[last_message_idx]["content"] = list_prompt_content
         await self._emit_and_schedule_close(
             __event_emitter__,
-            "📋 Preparing persona list table and reset info...",
+            "📋 Preparing persona list...",
             status_type="complete",
         )
         return body
@@ -1494,14 +1050,9 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             return body
 
         personas = self._load_personas()
-
-        # Determine which persona to apply
         target_persona = self.current_persona if self.current_persona else None
 
-        if not target_persona:
-            return body
-
-        if target_persona not in personas:
+        if not target_persona or target_persona not in personas:
             return body
 
         # Check if correct persona system message exists
@@ -1529,7 +1080,6 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                 ):
                     correct_system_msg_found = True
                     temp_messages.append(msg)
-                # Skip other system messages that look like old persona messages
             else:
                 temp_messages.append(msg)
 
@@ -1592,14 +1142,6 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
                     original_content_of_last_user_msg,
                     __event_emitter__,
                 )
-            elif detected_keyword_key == "download_personas":
-                return await self._handle_download_personas_command(
-                    body,
-                    messages,
-                    last_message_idx,
-                    original_content_of_last_user_msg,
-                    __event_emitter__,
-                )
             else:
                 # Handle persona switching command
                 return await self._handle_persona_switch_command(
@@ -1622,10 +1164,8 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
     def get_persona_list(self) -> str:
         personas = self._load_personas()
 
-        # Filter out master controller from user-facing list
-        display_personas = {
-            k: v for k, v in personas.items() if k != "_master_controller"
-        }
+        # Filter out master controller and metadata from user-facing list
+        display_personas = {k: v for k, v in personas.items() if not k.startswith("_")}
 
         persona_list_items = []
         for keyword in sorted(display_personas.keys()):
@@ -1635,21 +1175,22 @@ Leverage these capabilities appropriately - use LaTeX for math, Mermaid for diag
             persona_list_items.append(
                 f"• `{self.valves.keyword_prefix}{keyword}` - {name}: {desc}"
             )
+
         reset_keywords_display = ", ".join(
             [
                 f"`{self.valves.keyword_prefix}{rk.strip()}`"
                 for rk in self.valves.reset_keywords.split(",")
             ]
         )
+
         list_command_display = (
             f"`{self.valves.keyword_prefix}{self.valves.list_command_keyword}`"
         )
 
         command_info = (
             f"\n\n**System Commands:**\n"
-            f"• {list_command_display} - Lists persona commands and names in a multi-column Markdown table, plus reset instructions.\n"
-            f"• {reset_keywords_display} - Reset to default assistant behavior (LLM will confirm).\n"
-            f"• `{self.valves.keyword_prefix}download_personas` - Download and apply personas from repository (immediate)"
+            f"• {list_command_display} - Lists persona commands and names in a multi-column Markdown table.\n"
+            f"• {reset_keywords_display} - Reset to default assistant behavior (LLM will confirm)."
         )
 
         if not persona_list_items:
