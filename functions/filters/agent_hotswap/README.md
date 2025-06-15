@@ -2,7 +2,7 @@
 
 > **Transform your OpenWebUI experience with intelligent AI persona switching**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/open-webui/functions)
+[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/open-webui/functions)
 [![OpenWebUI](https://img.shields.io/badge/OpenWebUI-Compatible-green.svg)](https://github.com/open-webui/open-webui)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
