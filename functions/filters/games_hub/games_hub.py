@@ -3,8 +3,8 @@ title: Games Hub Filter
 author: pkeffect
 author_url: https://github.com/pkeffect
 funding_url: https://github.com/open-webui
-version: 8.5.0
-description: Streamlined Games Hub with robust auto-installation from GitHub. Auto-scans games directory and generates fresh config. Commands: !games (launch), !games scan (regenerate config).
+version: 8.5.1
+description: Environment-agnostic Games Hub with robust auto-installation from GitHub. Auto-scans games directory and generates fresh config. Commands: !games (launch), !games scan (regenerate config).
 """
 
 from pydantic import BaseModel, Field
@@ -34,12 +34,172 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+def get_plugin_cache_dir(plugin_name: str) -> Path:
+    """
+    Determines the absolute path to the plugin's cache directory in an environment-agnostic way.
+    Works both in Docker containers and native installations with multiple fallback strategies.
+
+    Args:
+        plugin_name: The name of the plugin (e.g., 'games_hub')
+
+    Returns:
+        A pathlib.Path object representing the absolute path to the cache directory.
+
+    Raises:
+        FileNotFoundError: If the project root cannot be determined.
+    """
+
+    def try_path_discovery():
+        # Start with the absolute path of the current script file
+        current_file_path = Path(__file__).resolve()
+        logger.info(
+            f"[Cache Dir Discovery] Starting from script location: {current_file_path}"
+        )
+
+        # Strategy 1: Look for 'backend' directory (standard Open WebUI structure)
+        project_root = current_file_path
+        checked_paths = []
+
+        while project_root != project_root.parent:  # While not at filesystem root
+            checked_paths.append(str(project_root))
+            logger.info(f"[Cache Dir Discovery] Checking directory: {project_root}")
+
+            if (project_root / "backend").is_dir():
+                logger.info(
+                    f"[Cache Dir Discovery] Found 'backend' directory at: {project_root}"
+                )
+                cache_dir = (
+                    project_root
+                    / "backend"
+                    / "data"
+                    / "cache"
+                    / "functions"
+                    / plugin_name
+                )
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                return cache_dir
+
+            project_root = project_root.parent
+
+        logger.warning(
+            f"[Cache Dir Discovery] Strategy 1 failed. Checked paths: {checked_paths}"
+        )
+
+        # Strategy 2: Look for other Open WebUI markers
+        project_root = current_file_path
+        markers = [
+            "frontend",
+            "src",
+            "package.json",
+            "requirements.txt",
+            "docker-compose.yml",
+        ]
+
+        while project_root != project_root.parent:
+            for marker in markers:
+                if (project_root / marker).exists():
+                    logger.info(
+                        f"[Cache Dir Discovery] Found Open WebUI marker '{marker}' at: {project_root}"
+                    )
+                    # Try different cache directory structures
+                    possible_cache_paths = [
+                        project_root
+                        / "backend"
+                        / "data"
+                        / "cache"
+                        / "functions"
+                        / plugin_name,
+                        project_root / "data" / "cache" / "functions" / plugin_name,
+                        project_root / "cache" / "functions" / plugin_name,
+                        project_root / "backend" / "cache" / "functions" / plugin_name,
+                    ]
+
+                    for cache_path in possible_cache_paths:
+                        try:
+                            cache_path.mkdir(parents=True, exist_ok=True)
+                            logger.info(
+                                f"[Cache Dir Discovery] Successfully created cache directory: {cache_path}"
+                            )
+                            return cache_path
+                        except Exception as e:
+                            logger.warning(
+                                f"[Cache Dir Discovery] Failed to create {cache_path}: {e}"
+                            )
+                            continue
+
+            project_root = project_root.parent
+
+        # Strategy 3: Environment variable fallback
+        if "OPEN_WEBUI_DATA_DIR" in os.environ:
+            data_dir = Path(os.environ["OPEN_WEBUI_DATA_DIR"])
+            cache_dir = data_dir / "cache" / "functions" / plugin_name
+            logger.info(f"[Cache Dir Discovery] Using OPEN_WEBUI_DATA_DIR: {cache_dir}")
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            return cache_dir
+
+        # Strategy 4: Current working directory fallback
+        cwd = Path.cwd()
+        if "open-webui" in str(cwd).lower() or "openwebui" in str(cwd).lower():
+            cache_dir = cwd / "data" / "cache" / "functions" / plugin_name
+            logger.info(
+                f"[Cache Dir Discovery] Using current working directory fallback: {cache_dir}"
+            )
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            return cache_dir
+
+        return None
+
+    try:
+        cache_dir = try_path_discovery()
+        if cache_dir:
+            logger.info(
+                f"[Cache Dir] Successfully determined cache directory: {cache_dir}"
+            )
+            return cache_dir
+        else:
+            raise FileNotFoundError("All discovery strategies failed")
+
+    except Exception as e:
+        # Final fallback: Use a temporary directory with warning
+        temp_cache = Path.home() / ".cache" / "open-webui-games-hub" / plugin_name
+        logger.error(
+            f"[Cache Dir] Failed to find proper cache directory, using fallback: {temp_cache}"
+        )
+        logger.error(f"[Cache Dir] Original error: {e}")
+        logger.error(f"[Cache Dir] Script location: {Path(__file__).resolve()}")
+        logger.error(f"[Cache Dir] Current working directory: {Path.cwd()}")
+        logger.error(f"[Cache Dir] Environment variables: {dict(os.environ)}")
+
+        try:
+            temp_cache.mkdir(parents=True, exist_ok=True)
+            logger.warning(
+                f"[Cache Dir] Using temporary fallback directory: {temp_cache}"
+            )
+            return temp_cache
+        except Exception as fallback_error:
+            raise FileNotFoundError(
+                f"Could not determine plugin cache directory and fallback failed. "
+                f"Original error: {e}. Fallback error: {fallback_error}. "
+                f"Script location: {Path(__file__).resolve()}. "
+                f"Please check your Open WebUI installation."
+            )
+
+
 class HubDownloadManager:
     """Advanced download manager for Games Hub files with robust error handling."""
 
     def __init__(self, valves):
         self.valves = valves
-        self.hub_root_path = Path("/app/backend/data/cache/functions/games_hub")
+        # Use custom cache path if provided, otherwise use environment-agnostic discovery
+        if valves.custom_cache_path.strip():
+            custom_path = Path(valves.custom_cache_path.strip()).expanduser().resolve()
+            self.hub_root_path = custom_path / "games_hub"
+            logger.info(f"[Cache Dir] Using custom cache path: {self.hub_root_path}")
+            # Ensure the directory exists
+            self.hub_root_path.mkdir(parents=True, exist_ok=True)
+        else:
+            self.hub_root_path = get_plugin_cache_dir("games_hub")
+
         self.hub_index_path = self.hub_root_path / "index.html"
 
     def check_installation(self) -> bool:
@@ -307,7 +467,7 @@ class HubDownloadManager:
                 req = urllib.request.Request(
                     repo_url,
                     headers={
-                        "User-Agent": "OpenWebUI-GamesHub-Filter/8.4",
+                        "User-Agent": "OpenWebUI-GamesHub-Filter/8.5.1",
                         "Accept": "application/zip, application/octet-stream, */*",
                     },
                 )
@@ -712,6 +872,10 @@ class Filter:
             default=True,
             description="Automatically scan games directory and generate config after installation",
         )
+        custom_cache_path: str = Field(
+            default="",
+            description="Optional: Override automatic cache directory discovery with a custom path (leave empty for auto-detection)",
+        )
 
     def __init__(self):
         self.toggle = True
@@ -839,6 +1003,23 @@ class Filter:
         else:
             return {"command": "launch"}  # Default to launch for any other text
 
+    def _get_relative_hub_url(self) -> str:
+        """
+        Generate the relative URL for accessing the Games Hub from the web interface.
+        This constructs the web-accessible path that corresponds to our cache directory.
+        """
+        try:
+            # The web server typically maps /cache/ to the backend/data/cache/ directory
+            # Our hub is at: backend/data/cache/functions/games_hub/
+            # So the web URL should be: /cache/functions/games_hub/index.html
+            relative_url = "/cache/functions/games_hub/index.html"
+            logger.info(f"[Hub URL] Generated relative URL: {relative_url}")
+            return relative_url
+        except Exception as e:
+            logger.error(f"[Hub URL] Error generating URL: {e}")
+            # Fallback to the original hardcoded path
+            return "/cache/functions/games_hub/index.html"
+
     async def _emit_status(
         self,
         emitter: Callable,
@@ -965,7 +1146,8 @@ class Filter:
                 __event_emitter__, "✅ Hub ready! Opening Games Hub...", "complete"
             )
 
-            hub_url = "/cache/functions/games_hub/index.html"
+            # Use the environment-agnostic URL generation
+            hub_url = self._get_relative_hub_url()
             popup_script = f"""
                 window.open(
                     '{hub_url}', 
