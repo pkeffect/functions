@@ -1,13 +1,14 @@
 """
-title: Agent Hotswap - Enhanced Integration
+title: Agent Hotswap
 author: pkeffect & Claude AI
 author_url: https://github.com/pkeffect
 project_urls: https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap | https://github.com/open-webui/functions/tree/main/functions/filters/agent_hotswap | https://openwebui.com/f/pkeffect/agent_hotswap
 funding_url: https://github.com/open-webui
-version: 2.5.0
+version: 2.8.0
 description: Universal AI persona switching with enhanced multi-plugin integration and robust per-model persona support.
 requirements: pydantic>=2.0.0
 """
+
 
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
@@ -15,13 +16,14 @@ import re
 import json
 import time
 import os
-import urllib.request
+import asyncio
+import aiofiles
+import aiohttp
 import urllib.parse
 import shutil
 import glob
 from datetime import datetime
 from pathlib import Path
-from string import Template
 
 # OpenWebUI Imports
 try:
@@ -33,10 +35,15 @@ except ImportError:
     NATIVE_DB_AVAILABLE = False
 
 # Configuration
-CACHE_DIR = "agent_hotswap"
 CONFIG_FILE = "personas.json"
-DEFAULT_REPO = "https://raw.githubusercontent.com/open-webui/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json"
+UI_FILE = "index.html"
+DEFAULT_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json"
+UI_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/ui/index.html"
 TRUSTED_DOMAINS = ["github.com", "raw.githubusercontent.com"]
+
+# Global cache for better performance
+_GLOBAL_PERSONA_CACHE = {}
+_CACHE_LOCK = asyncio.Lock()
 
 
 class PluginIntegrationManager:
@@ -46,9 +53,8 @@ class PluginIntegrationManager:
     def create_integration_context(
         persona_data: Dict, command_type: str, **kwargs
     ) -> Dict:
-        """Create standardized integration context for other plugins"""
         context = {
-            "agent_hotswap_version": "2.5.0",
+            "agent_hotswap_version": "2.8.0",
             "timestamp": time.time(),
             "command_type": command_type,
             "persona_data": persona_data,
@@ -60,13 +66,10 @@ class PluginIntegrationManager:
     def prepare_per_model_context(
         assignments: Dict[int, Dict], personas_data: Dict
     ) -> Dict:
-        """Prepare detailed per-model context for Multi-Model Filter"""
         context = {}
-
         for model_num, assignment in assignments.items():
             persona_key = assignment["key"]
             persona_info = personas_data.get(persona_key, {})
-
             context[f"persona{model_num}"] = {
                 "key": persona_key,
                 "name": assignment["name"],
@@ -75,19 +78,14 @@ class PluginIntegrationManager:
                 "capabilities": persona_info.get("capabilities", []),
                 "model_num": model_num,
             }
-
-        # Add meta information
         context["per_model_active"] = True
         context["total_assigned_models"] = len(assignments)
         context["assigned_model_numbers"] = list(assignments.keys())
-
         return context
 
     @staticmethod
     def prepare_single_persona_context(persona_key: str, personas_data: Dict) -> Dict:
-        """Prepare single persona context for other plugins"""
         persona_info = personas_data.get(persona_key, {})
-
         return {
             "active_persona": persona_key,
             "active_persona_name": persona_info.get("name", persona_key.title()),
@@ -102,13 +100,10 @@ class PluginIntegrationManager:
     def prepare_multi_persona_context(
         sequence: List[Dict], personas_data: Dict
     ) -> Dict:
-        """Prepare multi-persona sequence context"""
         sequence_data = []
-
         for step in sequence:
             persona_key = step["persona"]
             persona_info = personas_data.get(persona_key, {})
-
             sequence_data.append(
                 {
                     "persona_key": persona_key,
@@ -120,7 +115,6 @@ class PluginIntegrationManager:
                     "step_order": len(sequence_data) + 1,
                 }
             )
-
         return {
             "multi_persona_active": True,
             "persona_sequence": sequence_data,
@@ -131,7 +125,7 @@ class PluginIntegrationManager:
 
 class PersonaStorage:
     @staticmethod
-    def store_persona(
+    async def store_persona(
         user_id: str,
         chat_id: str,
         persona: Optional[str],
@@ -139,6 +133,26 @@ class PersonaStorage:
     ):
         if not NATIVE_DB_AVAILABLE or not user_id or not chat_id:
             return
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                PersonaStorage._sync_store_persona,
+                user_id,
+                chat_id,
+                persona,
+                context,
+            )
+        except Exception as e:
+            print(f"[PersonaStorage] Async store error: {e}")
+
+    @staticmethod
+    def _sync_store_persona(
+        user_id: str,
+        chat_id: str,
+        persona: Optional[str],
+        context: Optional[Dict] = None,
+    ):
         try:
             user = Users.get_user_by_id(user_id)
             if user:
@@ -155,12 +169,27 @@ class PersonaStorage:
                 metadata["persona_state"] = persona_state
                 Users.update_user_by_id(user_id, {"info": metadata})
         except Exception as e:
-            print(f"[PersonaStorage] Store error: {e}")
+            print(f"[PersonaStorage] Sync store error: {e}")
 
     @staticmethod
-    def get_persona(user_id: str, chat_id: str) -> tuple[Optional[str], Optional[Dict]]:
+    async def get_persona(
+        user_id: str, chat_id: str
+    ) -> tuple[Optional[str], Optional[Dict]]:
         if not NATIVE_DB_AVAILABLE or not user_id or not chat_id:
             return None, None
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, PersonaStorage._sync_get_persona, user_id, chat_id
+            )
+        except Exception as e:
+            print(f"[PersonaStorage] Async get error: {e}")
+        return None, None
+
+    @staticmethod
+    def _sync_get_persona(
+        user_id: str, chat_id: str
+    ) -> tuple[Optional[str], Optional[Dict]]:
         try:
             user = Users.get_user_by_id(user_id)
             if user and user.info:
@@ -169,13 +198,26 @@ class PersonaStorage:
                     "context", {}
                 )
         except Exception as e:
-            print(f"[PersonaStorage] Get error: {e}")
+            print(f"[PersonaStorage] Sync get error: {e}")
         return None, None
 
 
 class PersonaDownloader:
     def __init__(self, config_path_func):
         self.get_config_path = config_path_func
+        self._session = None
+
+    async def _get_session(self):
+        if self._session is None or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=30)
+            self._session = aiohttp.ClientSession(
+                timeout=timeout, headers={"User-Agent": "OpenWebUI-AgentHotswap/2.8.0"}
+            )
+        return self._session
+
+    async def close_session(self):
+        if self._session and not self._session.closed:
+            await self._session.close()
 
     def is_trusted_domain(self, url: str) -> bool:
         try:
@@ -186,142 +228,82 @@ class PersonaDownloader:
         except:
             return False
 
-    def _get_backup_dir(self) -> str:
-        """Get the backup directory path"""
+    def _get_ui_path(self) -> str:
         config_path = self.get_config_path()
-        backup_dir = os.path.join(os.path.dirname(config_path), "backups")
-        os.makedirs(backup_dir, exist_ok=True)
-        return backup_dir
+        return os.path.join(os.path.dirname(config_path), UI_FILE)
 
-    def _create_backup(self, config_path: str) -> str:
-        """Create a timestamped backup of the current personas.json"""
-        if not os.path.exists(config_path):
-            return None
+    async def download_ui_file(
+        self, url: str = None, force_download: bool = False
+    ) -> Dict:
+        download_url = url or UI_REPO
+        if not self.is_trusted_domain(download_url):
+            return {"success": False, "error": "Untrusted domain"}
+
+        ui_path = self._get_ui_path()
+
+        if not force_download and os.path.exists(ui_path):
+            try:
+                async with aiofiles.open(ui_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                    if len(content) > 100:
+                        return {
+                            "success": True,
+                            "skipped": True,
+                            "reason": "file_exists",
+                        }
+            except Exception:
+                pass
 
         try:
-            backup_dir = self._get_backup_dir()
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            backup_filename = f"personas_backup_{timestamp}.json"
-            backup_path = os.path.join(backup_dir, backup_filename)
+            session = await self._get_session()
+            async with session.get(download_url) as response:
+                if response.status != 200:
+                    return {"success": False, "error": f"HTTP {response.status}"}
+                content = await response.text()
+                if len(content) > 1024 * 1024:
+                    return {"success": False, "error": "UI file too large"}
 
-            shutil.copy2(config_path, backup_path)
-            print(f"[AGENT_HOTSWAP] Backup created: {backup_filename}")
-            return backup_path
-        except Exception as e:
-            print(f"[AGENT_HOTSWAP] Backup creation failed: {e}")
-            return None
+                os.makedirs(os.path.dirname(ui_path), exist_ok=True)
+                async with aiofiles.open(ui_path, "w", encoding="utf-8") as f:
+                    await f.write(content)
 
-    def _cleanup_old_backups(self, max_backups: int = 10):
-        """Remove old backup files, keeping only the most recent ones"""
-        try:
-            backup_dir = self._get_backup_dir()
-            backup_pattern = os.path.join(backup_dir, "personas_backup_*.json")
-            backup_files = glob.glob(backup_pattern)
-
-            if len(backup_files) > max_backups:
-                # Sort by modification time (oldest first)
-                backup_files.sort(key=os.path.getmtime)
-                files_to_remove = backup_files[:-max_backups]
-
-                for file_path in files_to_remove:
-                    try:
-                        os.remove(file_path)
-                        print(
-                            f"[AGENT_HOTSWAP] Removed old backup: {os.path.basename(file_path)}"
-                        )
-                    except Exception as e:
-                        print(
-                            f"[AGENT_HOTSWAP] Failed to remove backup {file_path}: {e}"
-                        )
-
-        except Exception as e:
-            print(f"[AGENT_HOTSWAP] Backup cleanup failed: {e}")
-
-    def restore_from_backup(self, backup_filename: str = None) -> Dict:
-        """Restore personas from a backup file"""
-        try:
-            backup_dir = self._get_backup_dir()
-
-            if backup_filename:
-                backup_path = os.path.join(backup_dir, backup_filename)
-            else:
-                # Use most recent backup
-                backup_pattern = os.path.join(backup_dir, "personas_backup_*.json")
-                backup_files = glob.glob(backup_pattern)
-                if not backup_files:
-                    return {"success": False, "error": "No backup files found"}
-                backup_path = max(backup_files, key=os.path.getmtime)
-
-            if not os.path.exists(backup_path):
                 return {
-                    "success": False,
-                    "error": f"Backup file not found: {backup_filename or 'latest'}",
+                    "success": True,
+                    "size": len(content),
+                    "path": ui_path,
                 }
-
-            config_path = self.get_config_path()
-
-            # Create backup of current state before restoring
-            current_backup = self._create_backup(config_path)
-
-            # Restore from backup
-            shutil.copy2(backup_path, config_path)
-
-            return {
-                "success": True,
-                "restored_from": os.path.basename(backup_path),
-                "current_backup": (
-                    os.path.basename(current_backup) if current_backup else None
-                ),
-            }
-
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def list_backups(self) -> List[Dict]:
-        """List all available backup files with metadata"""
-        try:
-            backup_dir = self._get_backup_dir()
-            backup_pattern = os.path.join(backup_dir, "personas_backup_*.json")
-            backup_files = glob.glob(backup_pattern)
-
-            backups = []
-            for backup_path in sorted(backup_files, key=os.path.getmtime, reverse=True):
-                try:
-                    stat = os.stat(backup_path)
-                    backups.append(
-                        {
-                            "filename": os.path.basename(backup_path),
-                            "created": datetime.fromtimestamp(
-                                stat.st_mtime
-                            ).isoformat(),
-                            "size": stat.st_size,
-                            "path": backup_path,
-                        }
-                    )
-                except Exception as e:
-                    print(f"[AGENT_HOTSWAP] Error reading backup {backup_path}: {e}")
-
-            return backups
-
-        except Exception as e:
-            print(f"[AGENT_HOTSWAP] Error listing backups: {e}")
-            return []
-
     async def download_personas(
-        self, url: str = None, merge: bool = True, create_backup: bool = True
+        self,
+        url: str = None,
+        merge: bool = True,
+        create_backup: bool = True,
+        force_download: bool = False,
     ) -> Dict:
         download_url = url or DEFAULT_REPO
         if not self.is_trusted_domain(download_url):
             return {"success": False, "error": "Untrusted domain"}
 
-        try:
-            req = urllib.request.Request(
-                download_url, headers={"User-Agent": "OpenWebUI-AgentHotswap/2.5.0"}
+        # Download UI file alongside personas
+        ui_result = await self.download_ui_file(force_download=force_download)
+        ui_success = ui_result.get("success", False)
+        if not ui_success:
+            print(
+                f"[AGENT_HOTSWAP] UI download failed: {ui_result.get('error', 'unknown')}"
             )
-            with urllib.request.urlopen(req, timeout=30) as response:
+        elif not ui_result.get("skipped"):
+            print(
+                f"[AGENT_HOTSWAP] UI file downloaded: {ui_result.get('size', 0)} bytes"
+            )
+
+        try:
+            session = await self._get_session()
+            async with session.get(download_url) as response:
                 if response.status != 200:
                     return {"success": False, "error": f"HTTP {response.status}"}
-                content = response.read().decode("utf-8")
+                content = await response.text()
                 if len(content) > 1024 * 1024 * 2:
                     return {"success": False, "error": "File too large"}
                 remote_personas = json.loads(content)
@@ -329,53 +311,22 @@ class PersonaDownloader:
                     return {"success": False, "error": "Invalid format"}
 
                 config_path = self.get_config_path()
-                backup_path = None
-
-                # CREATE BACKUP BEFORE MAKING CHANGES
-                if create_backup:
-                    backup_path = self._create_backup(config_path)
-
-                final_personas = remote_personas
-                if merge:
-                    local_personas = {}
-                    if os.path.exists(config_path):
-                        try:
-                            with open(config_path, "r", encoding="utf-8") as f:
-                                local_personas = json.load(f)
-                        except (json.JSONDecodeError, FileNotFoundError):
-                            print(
-                                "[AGENT_HOTSWAP] Warning: Could not parse local personas.json, will overwrite."
-                            )
-
-                    merged = remote_personas.copy()
-                    if isinstance(local_personas, dict):
-                        merged.update(local_personas)
-                    final_personas = merged
-
-                final_personas["_metadata"] = {
-                    "last_updated": datetime.now().isoformat(),
-                    "source_url": download_url,
-                    "version": "auto-downloaded",
-                    "merge_strategy": "local_priority" if merge else "overwrite",
-                    "backup_created": backup_path if backup_path else None,
-                }
-
                 os.makedirs(os.path.dirname(config_path), exist_ok=True)
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(final_personas, f, indent=2, ensure_ascii=False)
+                async with aiofiles.open(config_path, "w", encoding="utf-8") as f:
+                    await f.write(
+                        json.dumps(remote_personas, indent=2, ensure_ascii=False)
+                    )
 
-                # CLEANUP OLD BACKUPS
-                if create_backup:
-                    self._cleanup_old_backups()
-
-                count = len([k for k in final_personas.keys() if not k.startswith("_")])
+                count = len(
+                    [k for k in remote_personas.keys() if not k.startswith("_")]
+                )
                 return {
                     "success": True,
                     "count": count,
                     "size": len(content),
-                    "backup_created": backup_path is not None,
+                    "ui_downloaded": ui_success and not ui_result.get("skipped"),
+                    "ui_status": "success" if ui_success else "failed",
                 }
-
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -384,84 +335,64 @@ class UniversalPatternMatcher:
     def __init__(self, prefix: str = "!", case_sensitive: bool = False):
         self.prefix = prefix
         self.case_sensitive = case_sensitive
+        self._patterns = {}
         self._compile_patterns()
 
     def _compile_patterns(self):
         flags = 0 if self.case_sensitive else re.IGNORECASE
         prefix_escaped = re.escape(self.prefix)
-
-        # Universal persona detection
-        self.persona_pattern = re.compile(
+        self._patterns["persona"] = re.compile(
             rf"{prefix_escaped}([a-zA-Z][a-zA-Z0-9_]*)\b", flags
         )
-
-        # Enhanced per-model persona pattern with better validation
-        self.per_model_pattern = re.compile(
+        self._patterns["per_model"] = re.compile(
             rf"{prefix_escaped}persona(\d+)\s+([a-zA-Z][a-zA-Z0-9_]*)\b", flags
         )
-
-        # Command patterns
-        self.agent_list_pattern = re.compile(rf"{prefix_escaped}agent\s+list\b", flags)
-        self.agent_base_pattern = re.compile(rf"{prefix_escaped}agent\b", flags)
-        self.reset_pattern = re.compile(
+        self._patterns["agent_list"] = re.compile(
+            rf"{prefix_escaped}agent\s+list\b", flags
+        )
+        self._patterns["agent_base"] = re.compile(rf"{prefix_escaped}agent\b", flags)
+        self._patterns["reset"] = re.compile(
             rf"{prefix_escaped}(?:reset|default|normal)\b", flags
         )
+        self._patterns["multi"] = re.compile(rf"{prefix_escaped}multi\b", flags)
 
-        # Multi-model pattern detection (for integration)
-        self.multi_pattern = re.compile(rf"{prefix_escaped}multi\b", flags)
-
-    def detect_command(self, content: str) -> Dict[str, Any]:
+    async def detect_command(self, content: str) -> Dict[str, Any]:
         if not content:
             return {"type": "none"}
-
-        # Check special commands first
-        if self.agent_list_pattern.search(content):
+        if self._patterns["agent_list"].search(content):
             return {"type": "list"}
-        if self.agent_base_pattern.search(content):
+        if self._patterns["agent_base"].search(content):
             return {"type": "help"}
-        if self.reset_pattern.search(content):
+        if self._patterns["reset"].search(content):
             return {"type": "reset"}
-
-        # Check for multi-model commands (for integration awareness)
-        has_multi = bool(self.multi_pattern.search(content))
-
-        # Check per-model personas with enhanced validation
+        has_multi = bool(self._patterns["multi"].search(content))
         per_model_matches = {}
-        for match in self.per_model_pattern.finditer(content):
+        for match in self._patterns["per_model"].finditer(content):
             model_num = int(match.group(1))
             persona_key = match.group(2)
             if not self.case_sensitive:
                 persona_key = persona_key.lower()
-
-            # Validate model number (1-4 is reasonable range)
             if 1 <= model_num <= 4:
                 per_model_matches[model_num] = persona_key
-
         if per_model_matches:
             return {
                 "type": "per_model",
                 "personas": per_model_matches,
                 "has_multi_command": has_multi,
             }
-
-        # Check regular persona commands
-        matches = self.persona_pattern.findall(content)
+        matches = self._patterns["persona"].findall(content)
         if matches:
             command_keywords = {"agent", "list", "reset", "default", "normal", "multi"}
             personas = []
             for m in matches:
                 persona_key = m if self.case_sensitive else m.lower()
-                # Skip per-model commands and reserved keywords
                 if (
                     persona_key.startswith("persona") and persona_key[7:].isdigit()
                 ) or persona_key in command_keywords:
                     continue
                 personas.append(persona_key)
-
             if personas:
-                unique_personas = list(
-                    dict.fromkeys(personas)
-                )  # Remove duplicates while preserving order
+                unique_personas = list(dict.fromkeys(personas))
                 return (
                     {
                         "type": "single_persona",
@@ -475,74 +406,9 @@ class UniversalPatternMatcher:
                         "has_multi_command": has_multi,
                     }
                 )
-
         return {"type": "none"}
 
-    def parse_multi_persona_sequence(self, content: str) -> Dict:
-        """Parse content with multiple persona switches into structured sequence."""
-        if not content:
-            return {"is_multi_persona": False}
-
-        persona_matches = []
-        for match in self.persona_pattern.finditer(content):
-            persona_key = match.group(1)
-            if not self.case_sensitive:
-                persona_key = persona_key.lower()
-
-            # Skip per-model commands and reserved keywords
-            command_keywords = {"agent", "list", "reset", "default", "normal", "multi"}
-            if (
-                persona_key.startswith("persona") and persona_key[7:].isdigit()
-            ) or persona_key in command_keywords:
-                continue
-
-            persona_matches.append(
-                {"persona": persona_key, "start": match.start(), "end": match.end()}
-            )
-
-        if len(persona_matches) < 1:
-            return {"is_multi_persona": False}
-
-        sequence = []
-        for i, match in enumerate(persona_matches):
-            task_start = match["end"]
-            task_end = (
-                persona_matches[i + 1]["start"]
-                if i + 1 < len(persona_matches)
-                else len(content)
-            )
-            task_content = content[task_start:task_end].strip()
-
-            if i + 1 < len(persona_matches):
-                next_persona_cmd = f"{self.prefix}{persona_matches[i + 1]['persona']}"
-                if task_content.endswith(next_persona_cmd):
-                    task_content = task_content[: -len(next_persona_cmd)].strip()
-
-            sequence.append(
-                {
-                    "persona": match["persona"],
-                    "task": (
-                        task_content
-                        if task_content
-                        else "Please introduce yourself and explain your capabilities."
-                    ),
-                }
-            )
-
-        requested_personas = list(
-            dict.fromkeys(match["persona"] for match in persona_matches)
-        )
-
-        return {
-            "is_multi_persona": len(sequence) > 0,
-            "is_single_persona": len(sequence) == 1,
-            "sequence": sequence,
-            "requested_personas": requested_personas,
-        }
-
     def remove_commands(self, content: str) -> str:
-        """Enhanced command removal that preserves multi-model commands"""
-        # Remove persona commands but preserve !multi commands
         persona_commands_pattern = re.compile(
             rf"{re.escape(self.prefix)}(agent(\s+list)?|reset|default|normal|persona\d+\s+[a-zA-Z][a-zA-Z0-9_]*|(?!multi)[a-zA-Z][a-zA-Z0-9_]*)\b\s*",
             re.IGNORECASE,
@@ -556,24 +422,34 @@ class PersonaCache:
         self._file_mtime = 0
         self._last_path = None
 
-    def get_personas(self, filepath: str) -> Dict:
-        try:
-            if not os.path.exists(filepath):
+    async def get_personas(self, filepath: str) -> Dict:
+        global _GLOBAL_PERSONA_CACHE, _CACHE_LOCK
+        async with _CACHE_LOCK:
+            try:
+                if not os.path.exists(filepath):
+                    return {}
+                current_mtime = os.path.getmtime(filepath)
+                cache_key = f"{filepath}:{current_mtime}"
+                if cache_key in _GLOBAL_PERSONA_CACHE:
+                    return _GLOBAL_PERSONA_CACHE[cache_key].copy()
+                if (
+                    filepath != self._last_path
+                    or current_mtime > self._file_mtime
+                    or not self._cache
+                ):
+                    async with aiofiles.open(filepath, "r", encoding="utf-8") as f:
+                        content = await f.read()
+                        self._cache = json.loads(content)
+                    self._file_mtime = current_mtime
+                    self._last_path = filepath
+                    _GLOBAL_PERSONA_CACHE[cache_key] = self._cache.copy()
+                    if len(_GLOBAL_PERSONA_CACHE) > 10:
+                        oldest_key = min(_GLOBAL_PERSONA_CACHE.keys())
+                        del _GLOBAL_PERSONA_CACHE[oldest_key]
+                return self._cache.copy()
+            except Exception as e:
+                print(f"[PersonaCache] Error loading personas: {e}")
                 return {}
-            current_mtime = os.path.getmtime(filepath)
-            if (
-                filepath != self._last_path
-                or current_mtime > self._file_mtime
-                or not self._cache
-            ):
-                with open(filepath, "r", encoding="utf-8") as f:
-                    self._cache = json.load(f)
-                self._file_mtime = current_mtime
-                self._last_path = filepath
-            return self._cache.copy()
-        except Exception as e:
-            print(f"[PersonaCache] Error loading personas: {e}")
-            return {}
 
 
 class Filter:
@@ -588,27 +464,31 @@ class Filter:
         enable_debug: bool = Field(default=False)
         refresh_personas: bool = Field(default=False)
         multi_persona_transitions: bool = Field(default=True)
-
-        # Enhanced integration settings
         enable_plugin_integration: bool = Field(
             default=True, description="Enable integration with other plugins"
         )
         integration_debug: bool = Field(
             default=False, description="Debug integration communications"
         )
-
-        # Backup settings
         enable_automatic_backups: bool = Field(
             default=True, description="Create automatic backups before updates"
         )
         max_backup_files: int = Field(
             default=10, description="Maximum number of backup files to keep"
         )
+        protect_custom_personas: bool = Field(
+            default=True,
+            description="Prevent auto-download from overwriting custom personas",
+        )
+        enable_global_cache: bool = Field(
+            default=True, description="Use global persona cache for better performance"
+        )
 
     def __init__(self):
         self.valves = self.Valves()
         self.toggle = True
         self.icon = "🎭"
+        self.plugin_directory_name = self._get_plugin_directory_name()
         self.current_persona = None
         self.current_context = {}
         self.pattern_matcher = UniversalPatternMatcher(
@@ -617,8 +497,32 @@ class Filter:
         self.persona_cache = PersonaCache()
         self.downloader = PersonaDownloader(self._get_config_path)
         self.integration_manager = PluginIntegrationManager()
-        self._ensure_personas_available()
-        self._handle_refresh()
+        self._init_task = None
+
+    def __del__(self):
+        try:
+            if hasattr(self, "downloader") and self.downloader._session:
+                asyncio.create_task(self.downloader.close_session())
+        except:
+            pass
+
+    def _get_plugin_directory_name(self) -> str:
+        try:
+            if __name__ != "__main__":
+                module_parts = __name__.split(".")
+                detected_name = module_parts[-1]
+                if detected_name.startswith("function_"):
+                    detected_name = detected_name[9:]
+                cleaned_name = re.sub(r"[^a-zA-Z0-9_-]", "_", detected_name.lower())
+                if cleaned_name and cleaned_name != "__main__":
+                    print(f"[AGENT_HOTSWAP] Auto-detected plugin name: {cleaned_name}")
+                    return cleaned_name
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Method 1 (__name__) failed: {e}")
+
+        fallback_name = "agent_hotswap"
+        print(f"[AGENT_HOTSWAP] Using fallback plugin name: {fallback_name}")
+        return fallback_name
 
     def _debug_log(self, message: str):
         if self.valves.enable_debug:
@@ -628,29 +532,52 @@ class Filter:
         if self.valves.integration_debug:
             print(f"[AGENT_HOTSWAP:INTEGRATION] {message}")
 
-    def _handle_refresh(self):
-        if getattr(self.valves, "refresh_personas", False):
-            self._download_personas_async()
-            self.valves.refresh_personas = False
-
     def _get_config_path(self) -> str:
         data_dir = os.getenv("DATA_DIR") or (
             "/app/backend/data"
             if os.path.exists("/app/backend")
             else str(Path.home() / ".local/share/open-webui")
         )
-        return os.path.join(data_dir, "cache", "functions", CACHE_DIR, CONFIG_FILE)
+        config_path = os.path.join(
+            data_dir, "cache", "functions", self.plugin_directory_name, CONFIG_FILE
+        )
+        return config_path
 
-    def _ensure_personas_available(self):
+    def _get_ui_path(self) -> str:
         config_path = self._get_config_path()
-        if not os.path.exists(config_path) or os.path.getsize(config_path) < 5:
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            self._create_minimal_config(config_path)
-        if self.valves.auto_download_personas:
-            self._download_personas_async()
+        return os.path.join(os.path.dirname(config_path), UI_FILE)
 
-    def _create_minimal_config(self, config_path: str):
-        """Creates a minimal config with master controller and only 2 essential personas."""
+    def _get_relative_hub_url(self) -> str:
+        try:
+            relative_url = f"/cache/functions/{self.plugin_directory_name}/index.html"
+            print(f"[Persona Browser URL] Generated relative URL: {relative_url}")
+            return relative_url
+        except Exception as e:
+            print(f"[Persona Browser URL] Error generating URL: {e}")
+            return f"/cache/functions/{self.plugin_directory_name}/index.html"
+
+    async def _ensure_personas_available(self):
+        config_path = self._get_config_path()
+        if not os.path.exists(config_path):
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            await self._create_minimal_config(config_path)
+            if self.valves.auto_download_personas:
+                await self._download_personas_async()
+        else:
+            try:
+                async with aiofiles.open(config_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
+                    existing_data = json.loads(content)
+                if not existing_data or len(existing_data) < 2:
+                    if self.valves.auto_download_personas:
+                        await self._download_personas_async()
+            except (json.JSONDecodeError, Exception) as e:
+                print(f"[AGENT_HOTSWAP] Error reading existing config: {e}")
+                await self._create_minimal_config(config_path)
+                if self.valves.auto_download_personas:
+                    await self._download_personas_async()
+
+    async def _create_minimal_config(self, config_path: str):
         try:
             minimal_config = {
                 "_master_controller": {
@@ -660,7 +587,7 @@ class Filter:
                     "prompt": """=== OPENWEBUI MASTER CONTROLLER ===
 You operate in OpenWebUI with comprehensive native capabilities:
 
-RENDERING: LaTeX ($$formula$$), Mermaid diagrams, HTML artifacts, SVG, enhanced Markdown
+RENDERING: LaTeX ($formula$), Mermaid diagrams, HTML artifacts, SVG, enhanced Markdown
 CODE EXECUTION: Python via Pyodide, Jupyter integration, interactive code blocks
 FILE HANDLING: Multi-format extraction (PDF, Word, Excel, etc.), drag-drop upload
 RAG: Document integration, web search, knowledge bases, citations
@@ -673,7 +600,6 @@ Leverage these capabilities appropriately for the best user experience.
 === END MASTER CONTROLLER ===
 """,
                 },
-                # Only 2 essential personas - the rest will be downloaded automatically
                 "coder": {
                     "name": "💻 Code Assistant",
                     "prompt": "You are the 💻 Code Assistant, an expert in programming and software development. Provide clean, efficient, well-documented code solutions with explanations of your approach and best practices.",
@@ -697,138 +623,170 @@ Leverage these capabilities appropriately for the best user experience.
                     ],
                 },
                 "_metadata": {
-                    "version": "minimal_v2.5.0",
+                    "version": "minimal_v2.8.0",
                     "last_updated": datetime.now().isoformat(),
                     "integration_ready": True,
-                    "auto_download_pending": True,
+                    "plugin_directory": self.plugin_directory_name,
+                    "initial_setup": True,
+                    "async_enabled": True,
+                    "popup_ui": True,
                 },
             }
-
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(minimal_config, f, indent=4, ensure_ascii=False)
+            async with aiofiles.open(config_path, "w", encoding="utf-8") as f:
+                await f.write(json.dumps(minimal_config, indent=4, ensure_ascii=False))
             print(
-                "[AGENT_HOTSWAP] Minimal config created with 2 personas - downloading full collection..."
+                f"[AGENT_HOTSWAP] Minimal config created in {self.plugin_directory_name}"
             )
         except Exception as e:
             print(f"[AGENT_HOTSWAP] Error creating minimal config: {e}")
 
-    def _download_personas_async(self):
+    async def _download_personas_async(self, force_download: bool = False):
         try:
-            import threading
+            result = await self.downloader.download_personas(
+                merge=self.valves.merge_on_update,
+                create_backup=self.valves.enable_automatic_backups,
+                force_download=force_download,
+            )
+            if result["success"]:
+                ui_msg = ""
+                if result.get("ui_downloaded"):
+                    ui_msg = " + UI downloaded"
+                elif result.get("ui_status") == "failed":
+                    ui_msg = " (UI download failed - will use fallback)"
 
-            def download():
-                try:
-                    import asyncio
-
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    result = loop.run_until_complete(
-                        self.downloader.download_personas(
-                            merge=self.valves.merge_on_update,
-                            create_backup=self.valves.enable_automatic_backups,
-                        )
-                    )
-                    if result["success"]:
-                        backup_msg = (
-                            " (backup created)" if result.get("backup_created") else ""
-                        )
-                        print(
-                            f"[AGENT_HOTSWAP] Downloaded {result['count']} personas{backup_msg}"
-                        )
-                        self.persona_cache._cache = {}
-                    else:
-                        print(f"[AGENT_HOTSWAP] Download failed: {result['error']}")
-                    loop.close()
-                except Exception as e:
-                    print(f"[AGENT_HOTSWAP] Download thread error: {e}")
-
-            threading.Thread(target=download, daemon=True).start()
+                print(f"[AGENT_HOTSWAP] Downloaded {result['count']} personas{ui_msg}")
+                global _GLOBAL_PERSONA_CACHE
+                _GLOBAL_PERSONA_CACHE.clear()
+            else:
+                print(f"[AGENT_HOTSWAP] Download failed: {result['error']}")
         except Exception as e:
-            print(f"[AGENT_HOTSWAP] Could not start download: {e}")
+            print(f"[AGENT_HOTSWAP] Download error: {e}")
 
-    def _load_personas(self) -> Dict:
-        return self.persona_cache.get_personas(self._get_config_path()) or {}
+    async def _load_personas(self) -> Dict:
+        return await self.persona_cache.get_personas(self._get_config_path()) or {}
 
     def _safe_get_ids(self, body: dict, user: Optional[dict]):
         chat_id = body.get("chat_id") or body.get("id") or f"chat_{int(time.time())}"
         user_id = user.get("id", "anonymous") if user else "anonymous"
         return str(chat_id), str(user_id)
 
-    def _create_system_message(self, persona_key: str) -> Dict:
-        personas = self._load_personas()
+    async def _emit_status(
+        self,
+        emitter,
+        message: str,
+        status_type: str = "in_progress",
+        done: bool = False,
+    ):
+        if not emitter or not self.valves.show_persona_info:
+            return
+        try:
+            await emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "description": message,
+                        "status": status_type,
+                        "done": done,
+                        "hidden": done,
+                    },
+                }
+            )
+        except Exception as e:
+            print(f"[Status Emit] Error: {e}")
+
+    async def _update_personas_data_file(self, personas: Dict):
+        """Create a separate personas.json file that the UI can load"""
+        try:
+            ui_dir = os.path.dirname(self._get_ui_path())
+            personas_json_path = os.path.join(ui_dir, "personas.json")
+
+            # Debug logging
+            print(f"[AGENT_HOTSWAP] UI directory: {ui_dir}")
+            print(f"[AGENT_HOTSWAP] Personas JSON path: {personas_json_path}")
+            print(
+                f"[AGENT_HOTSWAP] Personas count: {len([k for k, v in personas.items() if not k.startswith('_')])}"
+            )
+
+            # Ensure directory exists
+            os.makedirs(ui_dir, exist_ok=True)
+
+            # Write personas data as a separate JSON file
+            async with aiofiles.open(personas_json_path, "w", encoding="utf-8") as f:
+                await f.write(json.dumps(personas, indent=2, ensure_ascii=False))
+
+            # Verify the file was written
+            if os.path.exists(personas_json_path):
+                file_size = os.path.getsize(personas_json_path)
+                print(f"[AGENT_HOTSWAP] ✅ Updated personas.json ({file_size} bytes)")
+            else:
+                print(f"[AGENT_HOTSWAP] ❌ Failed to create personas.json")
+
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] ❌ Error updating personas.json: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+    def _generate_fallback_list(self, personas: Dict) -> str:
+        display_personas = {k: v for k, v in personas.items() if not k.startswith("_")}
+        if not display_personas:
+            return "No personas available."
+
+        lines = ["## 🎭 Available Personas\n"]
+        for key, data in sorted(display_personas.items()):
+            name = data.get("name", key.title())
+            description = data.get("description", "")
+            command = f"{self.valves.keyword_prefix}{key}"
+            lines.append(f"**{name}** - `{command}`")
+            if description:
+                lines.append(f"_{description}_")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _generate_help_message(self) -> str:
+        p = self.valves.keyword_prefix
+        protection_status = "✅ ON" if self.valves.protect_custom_personas else "❌ OFF"
+        return f"""### Agent Hotswap Commands
+
+- **`{p}agent`**: Displays this help message.
+- **`{p}agent list`**: Opens interactive persona browser in new window.
+- **`{p}{{persona_name}}`**: Activates a specific persona (e.g., `{p}coder`).
+- **`{p}reset`**: Resets to the default assistant.
+
+**Multi-Persona Support:** Use multiple personas in one message!
+Example: `{p}writer create a story {p}teacher explain techniques`
+
+**Per-Model Personas:** Assign different personas to specific models!
+Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
+
+**Performance Features:**
+- **Async Operations:** ✅ ENABLED
+- **Global Caching:** {"✅ ON" if self.valves.enable_global_cache else "❌ OFF"}
+- **Custom Persona Protection:** {protection_status}
+- **UI Mode:** Popup Window
+
+**Integration Features:**
+- Works seamlessly with Multi-Model conversations
+- Supports conversation summarization with persona context
+- Maintains persona state across long conversations
+
+**Directory:** `{self.plugin_directory_name}`
+**Version:** 2.8.0 (Popup Window UI)"""
+
+    async def _create_system_message(self, persona_key: str) -> Dict:
+        personas = await self._load_personas()
         if not personas:
             return {"role": "system", "content": "Error: Persona file not loaded."}
-
         master = personas.get("_master_controller", {})
         master_prompt = master.get("prompt", "")
         persona = personas.get(persona_key, {})
         persona_prompt = persona.get("prompt", f"You are the {persona_key} persona.")
-
         system_content = f"{master_prompt}\n\n{persona_prompt}"
-
         if self.valves.show_persona_info:
             persona_name = persona.get("name", persona_key.title())
             system_content += f"\n\n🎭 **Active Persona**: {persona_name}"
-
         return {"role": "system", "content": system_content}
-
-    def _create_multi_persona_system(self, requested_personas: List[str]) -> Dict:
-        """Create system message for multi-persona mode."""
-        personas = self._load_personas()
-        master = personas.get("_master_controller", {})
-        system_content = master.get("prompt", "")
-
-        persona_definitions = []
-        valid_personas = []
-
-        for persona_key in requested_personas:
-            if persona_key in personas:
-                persona_data = personas[persona_key]
-                persona_name = persona_data.get("name", persona_key.title())
-                persona_prompt = persona_data.get("prompt", "")
-                valid_personas.append(persona_key)
-
-                persona_definitions.append(
-                    f"""
-=== {persona_name.upper()} PERSONA ===
-Activation Command: !{persona_key}
-{persona_prompt}
-=== END {persona_name.upper()} ===
-"""
-                )
-
-        transition_instruction = ""
-        if self.valves.multi_persona_transitions and self.valves.show_persona_info:
-            transition_instruction = '3. Announce switches: "🎭 **[Persona Name]**"'
-        else:
-            transition_instruction = (
-                "3. Switch personas seamlessly without announcements"
-            )
-
-        multi_persona_instructions = f"""
-
-=== DYNAMIC MULTI-PERSONA MODE ===
-Active Personas: {len(valid_personas)} loaded
-
-{(''.join(persona_definitions))}
-
-EXECUTION FRAMEWORK:
-1. Parse user's persona sequence from their original message
-2. When you encounter !{{persona}}, switch to that persona immediately
-{transition_instruction}
-4. Execute the task following each !command until the next !command
-5. Maintain context flow between all switches
-6. Available commands: {', '.join([f'!{p}' for p in valid_personas])}
-
-Execute the user's multi-persona sequence seamlessly.
-=== END DYNAMIC MULTI-PERSONA MODE ===
-"""
-
-        return {
-            "role": "system",
-            "content": system_content + multi_persona_instructions,
-            "valid_personas": valid_personas,
-        }
 
     def _remove_persona_messages(self, messages: List[Dict]) -> List[Dict]:
         return [
@@ -847,89 +805,28 @@ Execute the user's multi-persona sequence seamlessly.
             )
         ]
 
-    def _generate_persona_list_html(self, personas: Dict) -> str:
-        if not personas or not isinstance(personas, dict):
-            return "<h3>Error: Personas file is empty or invalid.</h3>"
-
-        display_personas = {k: v for k, v in personas.items() if not k.startswith("_")}
-        if not display_personas:
-            return "<h3>No personas available.</h3>"
-
-        persona_count = len(display_personas)
-
-        sorted_keys = sorted(display_personas.keys())
-        grouped_personas = {}
-        for key in sorted_keys:
-            first_letter = key[0].upper()
-            if first_letter not in grouped_personas:
-                grouped_personas[first_letter] = []
-            grouped_personas[first_letter].append(key)
-
-        persona_grid_html = ""
-        for letter in sorted(grouped_personas.keys()):
-            persona_grid_html += f'<div class="card-full letter-group" id="group-{letter}"><h2>{letter}</h2></div>'
-            for key in grouped_personas[letter]:
-                name = display_personas[key].get("name", key.title())
-                description = display_personas[key].get(
-                    "description", "No description available."
-                )
-                command = f"{self.valves.keyword_prefix}{key}"
-                safe_name = name.replace('"', '"')
-                persona_grid_html += f"""<div class="card persona-card" data-id="{key.lower()}" data-name="{safe_name.lower()}"><h2>{name}</h2><p class="text-muted">{description}</p><div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-light);padding-top:1rem"><code>{command}</code><button class="btn btn-secondary copy-btn" data-command="{command}">Copy</button></div></div>"""
-
-        html_template = Template(
-            """<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${persona_count} Available Personas</title><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');:root{--font-primary:'Inter',sans-serif;--bg-color:#f8f9fa;--surface-color:#fff;--primary-text:#212529;--secondary-text:#495057;--accent:#0d6efd;--border:#dee2e6;--border-light:#e9ecef;--success:#198754;--code-bg:#e9ecef;--shadow:0 1px 3px rgba(0,0,0,.1)}html.dark{--bg-color:#111315;--surface-color:#1a1d21;--primary-text:#e4e4e7;--secondary-text:#a0a0a9;--accent:#3b82f6;--border:#363b42;--border-light:#2a2f36;--success:#22c55e;--code-bg:#1e2124;--shadow:0 1px 3px rgba(0,0,0,.2)}*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-primary);background:var(--bg-color);color:var(--primary-text);line-height:1.6;padding:1rem}.container{max-width:1200px;margin:0 auto}header{text-align:center;padding:2rem 0;border-bottom:1px solid var(--border);margin-bottom:2rem}.title{font-size:clamp(2.5rem,5vw,4rem);font-weight:600;margin-bottom:.5rem}.subtitle{color:var(--secondary-text);font-size:1.1rem;margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:1.5rem}.card{display:none;background:var(--surface-color);border:1px solid var(--border);border-radius:12px;padding:1.5rem;box-shadow:var(--shadow);transition:all .2s cubic-bezier(.4,0,.2,1);flex-direction:column}.card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}.card h2{font-size:1.25rem;font-weight:600;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border-light)}.text-muted{color:var(--secondary-text);flex-grow:1}code{background:var(--code-bg);border:1px solid var(--border-light);border-radius:4px;padding:.2em .4em;font-family:monospace;font-size:.9em}input{width:100%;padding:.75rem;margin-bottom:1rem;background:var(--surface-color);border:1px solid var(--border);border-radius:6px;font-family:var(--font-primary);font-size:1rem;color:var(--primary-text)}html.dark input{background:#252830}.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}.btn-secondary{background:#f8f9fa;color:var(--primary-text);border:1px solid var(--border)}html.dark .btn-secondary{background:#252830}.btn-secondary:hover{background:var(--surface-color)}.copy-btn.copied{background:var(--success);color:#fff;border-color:var(--success)}.card-full{grid-column:1/-1;background:#f8f9fa;border:1px solid var(--border);border-radius:12px;padding:.5rem 1.5rem;box-shadow:var(--shadow);display:none}html.dark .card-full{background:#252830}</style></head><body><div class=container><header><h1 class=title>${persona_count} Available Personas</h1><p class=subtitle>Search and copy commands to activate an AI persona.</p></header><input type=text id=search-bar placeholder="Search by name or command (e.g., 'coder', 'writer')..."><div class=grid>$persona_grid_html</div></div><script>document.addEventListener('DOMContentLoaded',function(){try{const e=parent.document.documentElement.classList.contains('dark');e&&document.documentElement.classList.add('dark')}catch(e){const t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');'dark'===t&&document.documentElement.classList.add('dark')}const e=document.getElementById('search-bar'),t=document.querySelectorAll('.persona-card'),o=document.querySelectorAll('.letter-group');t.forEach(e=>e.style.display='flex'),o.forEach(e=>e.style.display='block'),e.addEventListener('input',e=>{const c=e.target.value.toLowerCase();o.forEach(e=>{let o=0;let n=e.nextElementSibling;for(;n&&n.classList.contains('persona-card');){const t=n.dataset.id.includes(c)||n.dataset.name.includes(c);n.style.display=t?'flex':'none',t&&o++,n=n.nextElementSibling}e.style.display=o>0?'block':'none'})}),document.querySelectorAll('.copy-btn').forEach(e=>{e.addEventListener('click',()=>{const t=e.dataset.command;navigator.clipboard.writeText(t).then(()=>{e.textContent='Copied!',e.classList.add('copied'),'vibrate'in navigator&&navigator.vibrate(50),setTimeout(()=>{e.textContent='Copy',e.classList.remove('copied')},1500)})})})})</script></body></html>"""
-        )
-
-        return html_template.substitute(
-            persona_grid_html=persona_grid_html, persona_count=persona_count
-        )
-
-    def _generate_help_message(self) -> str:
-        p = self.valves.keyword_prefix
-        return f"""### Agent Hotswap Commands
-
-- **`{p}agent`**: Displays this help message.
-- **`{p}agent list`**: Shows an interactive list of all available personas.
-- **`{p}{{persona_name}}`**: Activates a specific persona (e.g., `{p}coder`).
-- **`{p}reset`**: Resets to the default assistant.
-
-**Multi-Persona Support:** Use multiple personas in one message!
-Example: `{p}writer create a story {p}teacher explain techniques`
-
-**Per-Model Personas:** Assign different personas to specific models!
-Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
-
-**Integration Features:**
-- Works seamlessly with Multi-Model conversations
-- Supports conversation summarization with persona context
-- Maintains persona state across long conversations"""
-
-    async def _emit_status(self, emitter, message: str):
-        if emitter and self.valves.show_persona_info:
-            await emitter(
-                {
-                    "type": "status",
-                    "data": {"description": message, "done": True, "timeout": 3000},
-                }
-            )
-
-    def _create_integration_context(
+    async def _create_integration_context(
         self, command_info: Dict, personas_data: Dict, **kwargs
     ) -> Dict:
-        """Create comprehensive integration context for other plugins"""
         if not self.valves.enable_plugin_integration:
             return {}
-
         base_context = {
             "agent_hotswap_active": True,
-            "agent_hotswap_version": "2.5.0",
+            "agent_hotswap_version": "2.8.0",
             "command_info": command_info,
             "timestamp": time.time(),
+            "plugin_directory": self.plugin_directory_name,
+            "async_enabled": True,
+            "popup_ui": True,
         }
-
-        if command_info["type"] == "per_model":
-            # Enhanced per-model context
+        if command_info["type"] == "single_persona":
+            integration_context = (
+                self.integration_manager.prepare_single_persona_context(
+                    command_info["persona"], personas_data
+                )
+            )
+            base_context.update(integration_context)
+        elif command_info["type"] == "per_model":
             assignments = {}
             for model_num, persona_key in command_info["personas"].items():
                 if persona_key in personas_data:
@@ -943,113 +840,132 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                         "description": persona_info.get("description", ""),
                         "capabilities": persona_info.get("capabilities", []),
                     }
-
             integration_context = self.integration_manager.prepare_per_model_context(
                 assignments, personas_data
             )
             base_context.update(integration_context)
-
-        elif command_info["type"] == "single_persona":
-            integration_context = (
-                self.integration_manager.prepare_single_persona_context(
-                    command_info["persona"], personas_data
-                )
-            )
-            base_context.update(integration_context)
-
-        elif command_info["type"] == "multi_persona":
-            sequence_data = self.pattern_matcher.parse_multi_persona_sequence(
-                kwargs.get("original_content", "")
-            )
-            if sequence_data["is_multi_persona"]:
-                integration_context = (
-                    self.integration_manager.prepare_multi_persona_context(
-                        sequence_data["sequence"], personas_data
-                    )
-                )
-                base_context.update(integration_context)
-
         base_context.update(kwargs)
-
         self._integration_debug(
             f"Created integration context: {list(base_context.keys())}"
         )
         return base_context
 
-    async def _handle_list_command(self, body: dict, emitter) -> dict:
-        await self._emit_status(emitter, "📋 Generating interactive persona list...")
-        personas = self._load_personas()
-        html_content = self._generate_persona_list_html(personas)
-        final_content = f"```html\n{html_content}\n```"
+    async def _handle_list_command(self, body: dict, emitter, event_call=None) -> dict:
+        try:
+            await self._emit_status(
+                emitter, "📋 Loading persona browser...", "in_progress"
+            )
 
-        # Send the artifact content using the streaming pattern
-        await emitter(
-            {"type": "message", "data": {"content": final_content, "done": False}}
-        )
+            personas = await self._load_personas()
+            print(f"[AGENT_HOTSWAP] Loaded {len(personas)} total personas")
+            display_personas = {
+                k: v for k, v in personas.items() if not k.startswith("_")
+            }
+            print(f"[AGENT_HOTSWAP] Display personas: {list(display_personas.keys())}")
 
-        # Send final completion chunk
-        await emitter({"type": "message", "data": {"content": "", "done": True}})
+            ui_path = self._get_ui_path()
+            print(f"[AGENT_HOTSWAP] UI path: {ui_path}")
 
-        # Return body with empty messages to prevent LLM processing
-        result = body.copy()
-        result["messages"] = []
-        result["_stop_processing"] = True
-        return result
+            if not os.path.exists(ui_path):
+                print(f"[AGENT_HOTSWAP] UI file not found, downloading...")
+                result = await self.downloader.download_ui_file()
+                if not result["success"]:
+                    print(f"[AGENT_HOTSWAP] UI download failed: {result.get('error')}")
+                    return await self._handle_list_command_fallback(body, emitter)
+            else:
+                print(f"[AGENT_HOTSWAP] UI file exists")
+
+            await self._update_personas_data_file(personas)
+
+            hub_url = self._get_relative_hub_url()
+            print(f"[AGENT_HOTSWAP] Opening popup at: {hub_url}")
+
+            popup_script = f"""
+                console.log('Opening persona browser at: {hub_url}');
+                window.open(
+                    '{hub_url}', 
+                    'personaBrowser_' + Date.now(), 
+                    'width=' + Math.min(screen.availWidth, 1200) + ',height=' + Math.min(screen.availHeight, 800) + ',scrollbars=yes,resizable=yes,menubar=no,toolbar=no'
+                );
+            """
+
+            if event_call:
+                await event_call({"type": "execute", "data": {"code": popup_script}})
+
+            await self._emit_status(emitter, "✅ Persona browser opened!", "complete")
+
+            await asyncio.sleep(2)
+            await self._emit_status(emitter, "", "complete", done=True)
+
+            result = body.copy()
+            result["_agent_hotswap_handled"] = True
+
+            for msg in reversed(result.get("messages", [])):
+                if msg.get("role") == "user":
+                    msg["content"] = (
+                        "Respond with exactly this message: 'Opening the 🎭 Persona Browser now. Browse and copy commands to switch between AI personas!'"
+                    )
+                    break
+
+            return result
+
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Error in list command: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return await self._handle_list_command_fallback(body, emitter)
+
+    async def _handle_list_command_fallback(self, body: dict, emitter) -> dict:
+        try:
+            await self._emit_status(
+                emitter, "⚠️ Using fallback persona list", "complete"
+            )
+            personas = await self._load_personas()
+            fallback_content = self._generate_fallback_list(personas)
+
+            if emitter:
+                await emitter(
+                    {"type": "message", "data": {"content": fallback_content}}
+                )
+
+            result = body.copy()
+            result["messages"] = [{"role": "assistant", "content": fallback_content}]
+            result["_agent_hotswap_handled"] = True
+            return result
+
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Error in fallback: {e}")
+            error_message = f"Error loading persona list: {str(e)}"
+            result = body.copy()
+            result["messages"] = [{"role": "assistant", "content": error_message}]
+            result["_agent_hotswap_handled"] = True
+            return result
 
     async def _handle_help_command(self, body: dict, emitter) -> dict:
-        help_content = self._generate_help_message()
-        await self._emit_status(emitter, "ℹ️ Showing Agent Hotswap commands")
+        try:
+            help_content = self._generate_help_message()
+            await self._emit_status(
+                emitter, "ℹ️ Showing Agent Hotswap commands", "complete"
+            )
 
-        # Send the help content using the streaming pattern
-        await emitter(
-            {"type": "message", "data": {"content": help_content, "done": False}}
-        )
+            if emitter:
+                await emitter({"type": "message", "data": {"content": help_content}})
 
-        # Send final completion chunk
-        await emitter({"type": "message", "data": {"content": "", "done": True}})
+            result = body.copy()
+            result["messages"] = [{"role": "assistant", "content": help_content}]
+            result["_agent_hotswap_handled"] = True
+            return result
 
-        # Return body with empty messages to prevent LLM processing
-        result = body.copy()
-        result["messages"] = []
-        result["_stop_processing"] = True
-        return result
-
-    async def _handle_reset_command(
-        self,
-        body: dict,
-        messages: List[Dict],
-        original_content: str,
-        emitter,
-        user_id: str,
-        chat_id: str,
-    ) -> dict:
-        self.current_persona = None
-        self.current_context = {}
-        PersonaStorage.store_persona(user_id, chat_id, None)
-        clean_messages = self._remove_persona_messages(messages)
-        cleaned_content = self.pattern_matcher.remove_commands(original_content)
-
-        reset_prompt = (
-            "You have been reset. Please confirm you are in default assistant mode."
-        )
-
-        for msg in reversed(clean_messages):
-            if msg.get("role") == "user":
-                msg["content"] = (
-                    f"{reset_prompt} Then help with: {cleaned_content}"
-                    if cleaned_content
-                    else reset_prompt
-                )
-                break
-
-        body["messages"] = clean_messages
-
-        # Clear integration context
-        if self.valves.enable_plugin_integration:
-            body["_filter_context"] = {"agent_hotswap_reset": True}
-
-        await self._emit_status(emitter, "🔄 Reset to default assistant")
-        return body
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Error in help command: {e}")
+            error_message = f"Error generating help: {str(e)}"
+            if emitter:
+                await emitter({"type": "message", "data": {"content": error_message}})
+            result = body.copy()
+            result["messages"] = [{"role": "assistant", "content": error_message}]
+            result["_agent_hotswap_handled"] = True
+            return result
 
     async def _handle_single_persona(
         self,
@@ -1062,22 +978,19 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
         chat_id: str,
         command_info: Dict,
     ) -> dict:
-        personas = self._load_personas()
+        personas = await self._load_personas()
         if not personas or persona_key not in personas:
             return body
-
         self.current_persona = persona_key
         self.current_context = {"type": "single_persona", "persona": persona_key}
-        PersonaStorage.store_persona(
+        await PersonaStorage.store_persona(
             user_id, chat_id, persona_key, self.current_context
         )
-
         clean_messages = self._remove_persona_messages(messages)
-        system_msg = self._create_system_message(persona_key)
+        system_msg = await self._create_system_message(persona_key)
         clean_messages.insert(0, system_msg)
         cleaned_content = self.pattern_matcher.remove_commands(original_content)
         persona_config = personas[persona_key]
-
         for msg in reversed(clean_messages):
             if msg.get("role") == "user":
                 if not cleaned_content:
@@ -1090,213 +1003,60 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                         f"Please briefly introduce yourself as {persona_name}. Then help with: {cleaned_content}"
                     )
                 break
-
         body["messages"] = clean_messages
-
-        # Enhanced integration context
         if self.valves.enable_plugin_integration:
-            body["_filter_context"] = self._create_integration_context(
+            body["_filter_context"] = await self._create_integration_context(
                 command_info, personas, original_content=original_content
             )
-
         persona_name = persona_config.get("name", persona_key.title())
-        await self._emit_status(emitter, f"🎭 Switched to {persona_name}")
+        await self._emit_status(emitter, f"🎭 Switched to {persona_name}", "complete")
         return body
 
-    async def _handle_multi_persona(
-        self,
-        personas_list: List[str],
-        body: dict,
-        messages: List[Dict],
-        original_content: str,
-        emitter,
-        user_id: str,
-        chat_id: str,
-        command_info: Dict,
-    ) -> dict:
-        """Handle multi-persona sequences."""
-        sequence_data = self.pattern_matcher.parse_multi_persona_sequence(
-            original_content
-        )
-
-        if not sequence_data["is_multi_persona"]:
-            return body
-
-        personas_data = self._load_personas()
-        valid_personas = [
-            p for p in sequence_data["requested_personas"] if p in personas_data
-        ]
-
-        if not valid_personas:
-            return body
-
-        clean_messages = self._remove_persona_messages(messages)
-        system_msg = self._create_multi_persona_system(valid_personas)
-        clean_messages.insert(0, system_msg)
-
-        # Build instructions for the sequence
-        instructions = ["Execute this multi-persona sequence:\n"]
-        for i, step in enumerate(sequence_data["sequence"], 1):
-            persona_key = step["persona"]
-            task = step["task"]
-            if persona_key in personas_data:
-                persona_name = personas_data[persona_key].get(
-                    "name", persona_key.title()
-                )
-                instructions.append(f"**Step {i} - {persona_name}:**\n{task}\n")
-
-        instructions.append(
-            "\nExecute each step in sequence, following the persona switching framework."
-        )
-
-        for msg in reversed(clean_messages):
-            if msg.get("role") == "user":
-                msg["content"] = "\n".join(instructions)
-                break
-
-        body["messages"] = clean_messages
-
-        # Update current persona state
-        self.current_persona = f"multi:{':'.join(valid_personas)}"
-        self.current_context = {
-            "type": "multi_persona",
-            "personas": valid_personas,
-            "sequence": sequence_data["sequence"],
-        }
-        PersonaStorage.store_persona(
-            user_id, chat_id, self.current_persona, self.current_context
-        )
-
-        # Enhanced integration context
-        if self.valves.enable_plugin_integration:
-            body["_filter_context"] = self._create_integration_context(
-                command_info, personas_data, original_content=original_content
-            )
-
-        persona_names = [
-            personas_data.get(p, {}).get("name", p.title()) for p in valid_personas
-        ]
-        await self._emit_status(
-            emitter, f"🎭 Multi-persona: {' → '.join(persona_names)}"
-        )
-        return body
-
-    async def _handle_per_model_personas(
-        self,
-        per_model_dict: Dict[int, str],
-        body: dict,
-        messages: List[Dict],
-        original_content: str,
-        emitter,
-        user_id: str,
-        chat_id: str,
-        command_info: Dict,
-    ) -> dict:
-        """Enhanced per-model persona assignments with robust integration."""
-        personas_data = self._load_personas()
-        valid_assignments = {}
-
-        for model_num, persona_key in per_model_dict.items():
-            if persona_key in personas_data:
-                valid_assignments[model_num] = {
-                    "key": persona_key,
-                    "name": personas_data[persona_key].get("name", persona_key.title()),
-                }
-
-        if not valid_assignments:
-            await self._emit_status(emitter, "❌ No valid persona assignments found")
-            return body
-
-        # Clean message content (remove persona commands but preserve !multi)
-        cleaned_content = self.pattern_matcher.remove_commands(original_content)
-
-        for msg in reversed(messages):
-            if msg.get("role") == "user":
-                if cleaned_content:
-                    msg["content"] = cleaned_content
-                else:
-                    persona_list = ", ".join(
-                        [p["name"] for p in valid_assignments.values()]
-                    )
-                    msg["content"] = (
-                        f"Please have each assigned persona ({persona_list}) introduce themselves."
-                    )
-                break
-
-        # Enhanced integration context creation
-        if self.valves.enable_plugin_integration:
-            body["_filter_context"] = self._create_integration_context(
-                command_info,
-                personas_data,
-                original_content=original_content,
-                valid_assignments=valid_assignments,
-            )
-
-            self._integration_debug(
-                f"Per-model context created with {len(valid_assignments)} assignments"
-            )
-
-        # Update persistence
-        self.current_persona = (
-            f"per_model:{':'.join([a['key'] for a in valid_assignments.values()])}"
-        )
-        self.current_context = {
-            "type": "per_model",
-            "assignments": valid_assignments,
-            "has_multi_command": command_info.get("has_multi_command", False),
-        }
-        PersonaStorage.store_persona(
-            user_id, chat_id, self.current_persona, self.current_context
-        )
-
-        assignments_text = []
-        for model_num in sorted(valid_assignments.keys()):
-            assignments_text.append(
-                f"Model {model_num}: {valid_assignments[model_num]['name']}"
-            )
-
-        await self._emit_status(emitter, f"🎭 Per-model: {', '.join(assignments_text)}")
-        return body
-
-    def _apply_persistent_persona(self, body: dict, messages: List[Dict]) -> dict:
+    async def _apply_persistent_persona(self, body: dict, messages: List[Dict]) -> dict:
         if not self.valves.persistent_persona or not self.current_persona:
             return body
-
-        # Skip if multi-persona or per-model mode
         if self.current_persona.startswith(("multi:", "per_model:")):
             return body
-
-        personas = self._load_personas()
+        personas = await self._load_personas()
         if not personas or self.current_persona not in personas:
             return body
-
-        # Check if system message already exists
         if any(
             "=== OPENWEBUI MASTER CONTROLLER ===" in m.get("content", "")
             for m in messages
             if m.get("role") == "system"
         ):
             return body
-
         clean_messages = self._remove_persona_messages(messages)
-        system_msg = self._create_system_message(self.current_persona)
+        system_msg = await self._create_system_message(self.current_persona)
         clean_messages.insert(0, system_msg)
         body["messages"] = clean_messages
-
-        # Add persistent persona context
         if self.valves.enable_plugin_integration and not body.get("_filter_context"):
             body["_filter_context"] = (
                 self.integration_manager.prepare_single_persona_context(
                     self.current_persona, personas
                 )
             )
-
         return body
 
     async def inlet(
-        self, body: dict, __event_emitter__, __user__: Optional[dict] = None
+        self,
+        body: dict,
+        __event_emitter__,
+        __event_call__=None,
+        __user__: Optional[dict] = None,
     ) -> dict:
         if not self.toggle:
+            return body
+
+        if body.get("_agent_hotswap_handled"):
+            return body
+
+        try:
+            if not hasattr(self, "_initialized"):
+                await self._ensure_personas_available()
+                self._initialized = True
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Initialization error: {e}")
             return body
 
         messages = body.get("messages", [])
@@ -1305,20 +1065,21 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
 
         chat_id, user_id = self._safe_get_ids(body, __user__)
 
-        # Restore persistent persona
         if (
             self.valves.persistent_persona
             and not self.current_persona
             and user_id != "anonymous"
         ):
-            stored_persona, stored_context = PersonaStorage.get_persona(
-                user_id, chat_id
-            )
-            if stored_persona:
-                self.current_persona = stored_persona
-                self.current_context = stored_context or {}
+            try:
+                stored_persona, stored_context = await PersonaStorage.get_persona(
+                    user_id, chat_id
+                )
+                if stored_persona:
+                    self.current_persona = stored_persona
+                    self.current_context = stored_context or {}
+            except Exception as e:
+                print(f"[AGENT_HOTSWAP] Error restoring persona: {e}")
 
-        # Find last user message
         last_user_content = ""
         for msg in reversed(messages):
             if msg.get("role") == "user":
@@ -1326,59 +1087,37 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                 break
 
         if not last_user_content:
-            return self._apply_persistent_persona(body, messages)
+            return await self._apply_persistent_persona(body, messages)
 
-        # Detect command type
-        command_info = self.pattern_matcher.detect_command(last_user_content)
+        try:
+            command_info = await self.pattern_matcher.detect_command(last_user_content)
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Error detecting command: {e}")
+            return await self._apply_persistent_persona(body, messages)
 
-        # Handle special commands first (these need to stop processing completely)
-        if command_info["type"] == "help":
-            result = await self._handle_help_command(body, __event_emitter__)
-            return result
-        elif command_info["type"] == "list":
-            result = await self._handle_list_command(body, __event_emitter__)
-            return result
-
-        # Handle other command types
-        if command_info["type"] == "reset":
-            return await self._handle_reset_command(
-                body, messages, last_user_content, __event_emitter__, user_id, chat_id
-            )
-        elif command_info["type"] == "per_model":
-            return await self._handle_per_model_personas(
-                command_info["personas"],
-                body,
-                messages,
-                last_user_content,
-                __event_emitter__,
-                user_id,
-                chat_id,
-                command_info,
-            )
-        elif command_info["type"] == "single_persona":
-            return await self._handle_single_persona(
-                command_info["persona"],
-                body,
-                messages,
-                last_user_content,
-                __event_emitter__,
-                user_id,
-                chat_id,
-                command_info,
-            )
-        elif command_info["type"] == "multi_persona":
-            return await self._handle_multi_persona(
-                command_info["personas"],
-                body,
-                messages,
-                last_user_content,
-                __event_emitter__,
-                user_id,
-                chat_id,
-                command_info,
-            )
-        else:
-            return self._apply_persistent_persona(body, messages)
+        try:
+            if command_info["type"] == "help":
+                return await self._handle_help_command(body, __event_emitter__)
+            elif command_info["type"] == "list":
+                return await self._handle_list_command(
+                    body, __event_emitter__, __event_call__
+                )
+            elif command_info["type"] == "single_persona":
+                return await self._handle_single_persona(
+                    command_info["persona"],
+                    body,
+                    messages,
+                    last_user_content,
+                    __event_emitter__,
+                    user_id,
+                    chat_id,
+                    command_info,
+                )
+            else:
+                return await self._apply_persistent_persona(body, messages)
+        except Exception as e:
+            print(f"[AGENT_HOTSWAP] Error handling command {command_info['type']}: {e}")
+            return await self._apply_persistent_persona(body, messages)
 
     async def outlet(
         self, body: dict, __event_emitter__, __user__: Optional[dict] = None
