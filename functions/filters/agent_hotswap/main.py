@@ -37,7 +37,7 @@ except ImportError:
 # Configuration
 CONFIG_FILE = "personas.json"
 UI_FILE = "index.html"
-DEFAULT_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/personas/personas.json"
+DEFAULT_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/personas.json"
 UI_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/ui/index.html"
 TRUSTED_DOMAINS = ["github.com", "raw.githubusercontent.com"]
 
