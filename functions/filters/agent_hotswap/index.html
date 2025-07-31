@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persona Browser</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        
+        :root {
+            --font-primary: 'Inter', sans-serif;
+            --bg-color: #f8f9fa;
+            --surface-color: #fff;
+            --primary-text: #212529;
+            --secondary-text: #495057;
+            --accent: #0d6efd;
+            --border: #dee2e6;
+            --border-light: #e9ecef;
+            --success: #198754;
+            --code-bg: #e9ecef;
+            --shadow: 0 1px 3px rgba(0,0,0,.1);
+            --shadow-lg: 0 8px 30px rgba(0,0,0,.15);
+        }
+        
+        html.dark {
+            --bg-color: #111315;
+            --surface-color: #1a1d21;
+            --primary-text: #e4e4e7;
+            --secondary-text: #a0a0a9;
+            --accent: #3b82f6;
+            --border: #363b42;
+            --border-light: #2a2f36;
+            --success: #22c55e;
+            --code-bg: #1e2124;
+            --shadow: 0 1px 3px rgba(0,0,0,.2);
+        }
+        
+        /* Theme switcher styles */
+        .theme-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle {
+            background: var(--surface-color);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: var(--shadow);
+            color: var(--primary-text);
+            font-size: 14px;
+            font-weight: 500;
+            font-family: var(--font-primary);
+        }
+        
+        .theme-toggle:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        html.dark .theme-toggle:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .theme-icon {
+            font-size: 16px;
+            line-height: 1;
+        }
+        
+        .theme-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            background: var(--bg-color);
+            color: var(--primary-text);
+            line-height: 1.6;
+            padding: 1rem;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        
+        .title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: var(--secondary-text);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        .search-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+        
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            background: var(--surface-color);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: var(--font-primary);
+            font-size: 1rem;
+            color: var(--primary-text);
+            transition: all 0.2s;
+            box-shadow: var(--shadow);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-text);
+            pointer-events: none;
+        }
+        
+        html.dark input {
+            background: #252830;
+        }
+        
+        .stats {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .card {
+            display: none;
+            background: var(--surface-color);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent), #8b5cf6);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+            border-color: var(--accent);
+        }
+        
+        .card:hover::before {
+            opacity: 1;
+        }
+        
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .persona-emoji {
+            font-size: 1.5em;
+        }
+        
+        .text-muted {
+            color: var(--secondary-text);
+            flex-grow: 1;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .card-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-light);
+            padding-top: 1rem;
+            gap: 1rem;
+        }
+        
+        code {
+            background: var(--code-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 0.4em 0.6em;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: var(--primary-text);
+            border: 1px solid var(--border);
+        }
+        
+        html.dark .btn-secondary {
+            background: #252830;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+        
+        .copy-btn.copied {
+            background: var(--success);
+            color: #fff;
+            border-color: var(--success);
+        }
+        
+        .card-full {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            display: none;
+            text-align: center;
+        }
+        
+        .card-full h2 {
+            border: none;
+            padding: 0;
+            margin: 0;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 3rem;
+            color: var(--secondary-text);
+            display: none;
+        }
+        
+        .no-results-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card-footer {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: stretch;
+            }
+            
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="theme-switcher">
+            <button class="theme-toggle" id="theme-toggle">
+                <span class="theme-icon" id="theme-icon">🌙</span>
+                <span class="theme-text" id="theme-text">Dark</span>
+            </button>
+        </div>
+        
+        <header>
+            <h1 class="title" id="persona-count">🎭 Persona Browser</h1>
+            <p class="subtitle">Search and activate AI personas with a click</p>
+        </header>
+        
+        <div class="search-container">
+            <div class="search-icon">🔍</div>
+            <input 
+                type="text" 
+                id="search-bar" 
+                placeholder="Search personas by name, description, or command..."
+                autocomplete="off"
+            >
+        </div>
+        
+        <div class="stats" id="stats"></div>
+        
+        <div class="grid" id="persona-grid">
+            <div class="no-results" id="no-results">
+                <div class="no-results-icon">🔍</div>
+                <h3>No personas found</h3>
+                <p>Try adjusting your search terms</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Personas data will be injected by the plugin or loaded dynamically
+        let PERSONAS_DATA = {};
+        
+        // Try to load personas data from the server
+        async function loadPersonasData() {
+            try {
+                console.log('Attempting to load personas data...');
+                
+                // Try multiple potential paths
+                const paths = [
+                    './personas.json',
+                    '../personas.json', 
+                    '/cache/functions/agent_hotswap/personas.json',
+                    './personas_data.json'
+                ];
+                
+                for (const path of paths) {
+                    try {
+                        console.log(`Trying to fetch: ${path}`);
+                        const response = await fetch(path);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                                PERSONAS_DATA = data;
+                                console.log('Successfully loaded personas from:', path);
+                                console.log('Loaded personas:', Object.keys(data));
+                                return true;
+                            }
+                        }
+                    } catch (e) {
+                        console.log(`Failed to load from ${path}:`, e.message);
+                    }
+                }
+                
+                // If no external file worked, try using any injected data
+                if (Object.keys(PERSONAS_DATA).length === 0) {
+                    console.warn('No personas data found from external files');
+                    // Try to use window.PERSONAS_DATA if it exists (fallback)
+                    if (window.PERSONAS_DATA && Object.keys(window.PERSONAS_DATA).length > 0) {
+                        PERSONAS_DATA = window.PERSONAS_DATA;
+                        console.log('Using fallback window.PERSONAS_DATA');
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('Error in loadPersonasData:', error);
+                return false;
+            }
+        }
+        
+        function setupThemeToggle() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = document.getElementById('theme-icon');
+            const themeText = document.getElementById('theme-text');
+            
+            // Check for saved theme or default to system preference
+            const savedTheme = localStorage.getItem('persona-browser-theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = savedTheme ? savedTheme === 'dark' : systemDark;
+            
+            function updateTheme(dark) {
+                if (dark) {
+                    document.documentElement.classList.add('dark');
+                    themeIcon.textContent = '☀️';
+                    themeText.textContent = 'Light';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeIcon.textContent = '🌙';
+                    themeText.textContent = 'Dark';
+                }
+                localStorage.setItem('persona-browser-theme', dark ? 'dark' : 'light');
+            }
+            
+            // Set initial theme
+            updateTheme(isDark);
+            
+            // Toggle theme on click
+            themeToggle.addEventListener('click', () => {
+                const currentlyDark = document.documentElement.classList.contains('dark');
+                updateTheme(!currentlyDark);
+            });
+            
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                if (!localStorage.getItem('persona-browser-theme')) {
+                    updateTheme(e.matches);
+                }
+            });
+        }
+        
+        class PersonaBrowser {
+            constructor() {
+                this.personas = {};
+                this.displayPersonas = {};
+                this.groupedPersonas = {};
+                this.searchBar = document.getElementById('search-bar');
+                this.grid = document.getElementById('persona-grid');
+                this.stats = document.getElementById('stats');
+                this.noResults = document.getElementById('no-results');
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupTheme();
+                this.loadPersonas();
+                this.renderPersonas();
+                this.setupSearch();
+                this.updateStats();
+            }
+            
+            setupTheme() {
+                // Setup theme toggle functionality
+                setupThemeToggle();
+                
+                // Try to detect parent theme if in iframe
+                try {
+                    if (window.parent && window.parent !== window) {
+                        const parentDark = window.parent.document.documentElement.classList.contains('dark');
+                        if (parentDark && !localStorage.getItem('persona-browser-theme')) {
+                            document.documentElement.classList.add('dark');
+                        }
+                    }
+                } catch (e) {
+                    // Ignore cross-origin errors
+                }
+            }
+            
+            loadPersonas() {
+                this.personas = PERSONAS_DATA || {};
+                this.displayPersonas = Object.fromEntries(
+                    Object.entries(this.personas).filter(([key]) => !key.startsWith('_'))
+                );
+                
+                console.log('PersonaBrowser loaded personas:', Object.keys(this.displayPersonas));
+                
+                if (Object.keys(this.displayPersonas).length === 0) {
+                    console.warn('No personas found! Data:', this.personas);
+                }
+                
+                this.groupPersonas();
+            }
+            
+            groupPersonas() {
+                this.groupedPersonas = {};
+                Object.keys(this.displayPersonas).sort().forEach(key => {
+                    const firstLetter = key[0].toUpperCase();
+                    if (!this.groupedPersonas[firstLetter]) {
+                        this.groupedPersonas[firstLetter] = [];
+                    }
+                    this.groupedPersonas[firstLetter].push(key);
+                });
+            }
+            
+            renderPersonas() {
+                const grid = this.grid;
+                
+                // Clear existing content except no-results
+                const existingCards = grid.querySelectorAll('.card, .card-full');
+                existingCards.forEach(card => card.remove());
+                
+                // Check if we have personas to display
+                if (Object.keys(this.displayPersonas).length === 0) {
+                    this.noResults.style.display = 'block';
+                    return;
+                }
+                
+                this.noResults.style.display = 'none';
+                
+                // Render grouped personas
+                Object.keys(this.groupedPersonas).sort().forEach(letter => {
+                    // Add letter group header
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'card-full letter-group';
+                    groupHeader.id = `group-${letter}`;
+                    groupHeader.innerHTML = `<h2>${letter}</h2>`;
+                    groupHeader.style.display = 'block';
+                    grid.appendChild(groupHeader);
+                    
+                    // Add personas in this group
+                    this.groupedPersonas[letter].forEach(key => {
+                        const persona = this.displayPersonas[key];
+                        const card = this.createPersonaCard(key, persona);
+                        card.style.display = 'flex';
+                        grid.appendChild(card);
+                    });
+                });
+                
+                console.log(`Rendered ${Object.keys(this.displayPersonas).length} persona cards`);
+            }
+            
+            createPersonaCard(key, persona) {
+                const name = persona.name || this.titleCase(key);
+                const description = persona.description || 'No description available.';
+                const command = `!${key}`;
+                const emoji = this.extractEmoji(name) || '🤖';
+                
+                const card = document.createElement('div');
+                card.className = 'card persona-card';
+                card.dataset.id = key.toLowerCase();
+                card.dataset.name = name.toLowerCase();
+                card.dataset.description = description.toLowerCase();
+                
+                card.innerHTML = `
+                    <h2>
+                        <span class="persona-emoji">${emoji}</span>
+                        ${name.replace(emoji, '').trim()}
+                    </h2>
+                    <p class="text-muted">${description}</p>
+                    <div class="card-footer">
+                        <code>${command}</code>
+                        <button class="btn btn-secondary copy-btn" data-command="${command}">
+                            📋 Copy Command
+                        </button>
+                    </div>
+                `;
+                
+                // Add click handler for copy button
+                const copyBtn = card.querySelector('.copy-btn');
+                copyBtn.addEventListener('click', () => {
+                    this.copyCommand(command, copyBtn);
+                });
+                
+                return card;
+            }
+            
+            extractEmoji(text) {
+                const emojiRegex = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
+                const match = text.match(emojiRegex);
+                return match ? match[0] : null;
+            }
+            
+            titleCase(str) {
+                return str.replace(/\w\S*/g, (txt) => 
+                    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+                );
+            }
+            
+            setupSearch() {
+                this.searchBar.addEventListener('input', (e) => {
+                    this.performSearch(e.target.value);
+                });
+            }
+            
+            copyCommand(cmd, button) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(cmd).then(() => {
+                        this.showCopyFeedback(button);
+                    }).catch(() => {
+                        this.fallbackCopy(cmd, button);
+                    });
+                } else {
+                    this.fallbackCopy(cmd, button);
+                }
+            }
+            
+            performSearch(query) {
+                const searchTerm = query.toLowerCase().trim();
+                const letterGroups = document.querySelectorAll('.letter-group');
+                const personaCards = document.querySelectorAll('.persona-card');
+                let visibleCount = 0;
+                
+                if (!searchTerm) {
+                    // Show all
+                    letterGroups.forEach(group => group.style.display = 'block');
+                    personaCards.forEach(card => {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    });
+                    this.noResults.style.display = 'none';
+                } else {
+                    // Filter based on search
+                    letterGroups.forEach(group => {
+                        let groupHasVisible = false;
+                        let currentCard = group.nextElementSibling;
+                        
+                        while (currentCard && currentCard.classList.contains('persona-card')) {
+                            const isVisible = this.cardMatchesSearch(currentCard, searchTerm);
+                            currentCard.style.display = isVisible ? 'flex' : 'none';
+                            
+                            if (isVisible) {
+                                groupHasVisible = true;
+                                visibleCount++;
+                            }
+                            
+                            currentCard = currentCard.nextElementSibling;
+                        }
+                        
+                        group.style.display = groupHasVisible ? 'block' : 'none';
+                    });
+                    
+                    this.noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+                }
+                
+                this.updateStats(visibleCount, searchTerm);
+            }
+            
+            cardMatchesSearch(card, searchTerm) {
+                const id = card.dataset.id || '';
+                const name = card.dataset.name || '';
+                const description = card.dataset.description || '';
+                
+                return id.includes(searchTerm) || 
+                       name.includes(searchTerm) || 
+                       description.includes(searchTerm) ||
+                       `!${id}`.includes(searchTerm);
+            }
+            
+            copyCommand(cmd, button) {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(cmd).then(() => {
+                        this.showCopyFeedback(button);
+                    }).catch(() => {
+                        this.fallbackCopy(cmd, button);
+                    });
+                } else {
+                    this.fallbackCopy(cmd, button);
+                }
+            }
+            
+            fallbackCopy(text, button) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    this.showCopyFeedback(button);
+                } catch (err) {
+                    button.textContent = '❌ Copy Failed';
+                    setTimeout(() => {
+                        button.textContent = '📋 Copy Command';
+                        button.classList.remove('copied');
+                    }, 2000);
+                }
+                
+                document.body.removeChild(textArea);
+            }
+            
+            showCopyFeedback(button) {
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.classList.add('copied');
+                
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            }
+            
+            performSearch(query) {
+                const searchTerm = query.toLowerCase().trim();
+                const letterGroups = document.querySelectorAll('.letter-group');
+                const personaCards = document.querySelectorAll('.persona-card');
+                let visibleCount = 0;
+                
+                if (!searchTerm) {
+                    // Show all
+                    letterGroups.forEach(group => group.style.display = 'block');
+                    personaCards.forEach(card => {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    });
+                    this.noResults.style.display = 'none';
+                } else {
+                    // Filter based on search
+                    letterGroups.forEach(group => {
+                        let groupHasVisible = false;
+                        let currentCard = group.nextElementSibling;
+                        
+                        while (currentCard && currentCard.classList.contains('persona-card')) {
+                            const isVisible = this.cardMatchesSearch(currentCard, searchTerm);
+                            currentCard.style.display = isVisible ? 'flex' : 'none';
+                            
+                            if (isVisible) {
+                                groupHasVisible = true;
+                                visibleCount++;
+                            }
+                            
+                            currentCard = currentCard.nextElementSibling;
+                        }
+                        
+                        group.style.display = groupHasVisible ? 'block' : 'none';
+                    });
+                    
+                    this.noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+                }
+                
+                this.updateStats(visibleCount, searchTerm);
+            }
+            
+            cardMatchesSearch(card, searchTerm) {
+                const id = card.dataset.id || '';
+                const name = card.dataset.name || '';
+                const description = card.dataset.description || '';
+                
+                return id.includes(searchTerm) || 
+                       name.includes(searchTerm) || 
+                       description.includes(searchTerm) ||
+                       `!${id}`.includes(searchTerm);
+            }
+            
+            fallbackCopy(text, button) {
+                // Fallback copy method
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    this.showCopyFeedback(button);
+                } catch (err) {
+                    console.error('Copy failed:', err);
+                    button.textContent = '❌ Copy Failed';
+                    setTimeout(() => {
+                        button.textContent = '📋 Copy Command';
+                        button.classList.remove('copied');
+                    }, 2000);
+                }
+                
+                document.body.removeChild(textArea);
+            }
+            
+            showCopyFeedback(button) {
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.classList.add('copied');
+                
+                // Haptic feedback if available
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            }
+            
+            updateStats(visibleCount = null, searchTerm = '') {
+                const totalCount = Object.keys(this.displayPersonas).length;
+                const displayCount = visibleCount !== null ? visibleCount : totalCount;
+                
+                document.getElementById('persona-count').textContent = 
+                    `🎭 ${displayCount} Available Persona${displayCount !== 1 ? 's' : ''}`;
+                
+                if (searchTerm) {
+                    this.stats.textContent = `Showing ${displayCount} of ${totalCount} personas`;
+                } else {
+                    this.stats.textContent = `${totalCount} personas ready to activate`;
+                }
+            }
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('DOM loaded, initializing...');
+            const dataLoaded = await loadPersonasData();
+            if (!dataLoaded) {
+                console.error('Failed to load persona data from all sources');
+            }
+            new PersonaBrowser();
+        });
+        
+        // Handle theme changes from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'theme-change') {
+                if (event.data.theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
