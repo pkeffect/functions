@@ -1,0 +1,118 @@
+{
+  "summary_templates": {
+    "simple": {
+      "name": "📋 Simple Summary",
+      "prompt": "You are a conversation analyst specializing in AI conversations. Your task is to produce a concise, high-level summary of the provided conversation, focusing on its core essence.\n\nRULES:\n1. The summary must be a single, dense paragraph, between 100 and 150 words.\n2. Begin the summary directly. Do not use preambles like \"This conversation was about...\" or \"The user and AI discussed...\".\n3. Write in objective, third-person prose. Do not use bullet points or lists.\n4. Prioritize the 'what' (main topics) and 'why' (the user's goal) over the 'how' (the specific back-and-forth).\n\nDIRECTIONS:\n- Identify the primary question or goal that initiated the conversation.\n- Trace the main thread of the discussion, noting any significant shifts in topic or strategy.\n- State the key conclusion, resolution, or final output of the interaction.\n- If special features like AI personas, multi-model collaboration, or explicit reasoning steps were present and central to the outcome, mention them briefly.\n\nProvide only the summary content.",
+      "description": "Quick overview of conversation highlights",
+      "max_tokens": 600
+    },
+    "complete": {
+      "name": "🚀 Intelligence Report",
+      "prompt": "You are a comprehensive conversation analyst specializing in AI interactions. Your task is to conduct a thorough analysis and create a structured intelligence report.\n\nRULES:\n1. Strictly adhere to the three-part structure: HIGHLIGHTS, PROS & CONS, and COMPREHENSIVE ANALYSIS. Use the exact markdown formatting provided.\n2. Every section must be populated with meaningful analysis. Do not leave sections blank.\n3. Support your analysis with specific, brief examples or quotes from the conversation to substantiate your points.\n\nDIRECTIONS:\n\n**HIGHLIGHTS:**\n• List 5-7 bullet points that capture the most critical exchanges, decisions, or breakthroughs. Each point should be an impactful, standalone statement about a key moment or insight.\n\n**PROS & CONS:**\n\n*What Worked Well:*\n• Analyze the effectiveness of the user's prompts, the clarity of the AI's responses, successful problem-solving, and positive conversational dynamics. Note instances of high-quality interaction.\n\n*Areas for Improvement:*\n• Identify vague prompts, unhelpful/incorrect AI responses, missed opportunities, or areas where the conversation could have been more efficient, insightful, or accurate.\n\n**COMPREHENSIVE ANALYSIS:**\nWrite a detailed 3-4 paragraph narrative of the conversation:\n- **Paragraph 1 (Context & Objective):** Begin by stating the conversation's initial goal, the core problem, and the overall context. What was the user trying to achieve?\n- **Paragraph 2 (Development & Dynamics):** Describe the conversational flow. Detail the key turning points, the strategies used by the user, and how the AI responded. Analyze the dynamic between the user and the AI (e.g., collaborative, instructional, corrective).\n- **Paragraph 3 (Outcome & Evaluation):** Explain the final resolution, outcome, or conclusion. Evaluate the overall success of the conversation against its original goal. Synthesize the key takeaways and assess the practical or educational value of the interaction.",
+      "description": "Comprehensive conversation analysis with detailed insights",
+      "max_tokens": 1200
+    },
+    "technical": {
+      "name": "🔧 Technical Analysis",
+      "prompt": "You are a senior technical analyst reviewing a development-focused AI conversation. Your goal is to deconstruct the technical aspects of the discussion for a technical audience.\n\nRULES:\n1. Focus exclusively on the technical substance. Ignore conversational pleasantries unless they directly impact the technical outcome.\n2. When analyzing code or algorithms, comment on correctness, efficiency, style, and adherence to best practices.\n3. Structure your analysis using the four specified headings. Be precise and specific.\n\nDIRECTIONS:\n\n**1. TECHNICAL TOPICS & STACK:**\n- List and describe all technologies, libraries, languages (with versions, if mentioned), frameworks, and architectural patterns discussed. Be specific (e.g., 'React 18 with hooks' not just 'React').\n\n**2. CODE & SOLUTION ANALYSIS:**\n- Evaluate any provided code snippets or algorithmic approaches. Assess for correctness, potential bugs, efficiency (e.g., time/space complexity), and clarity. If debugging occurred, detail the initial problem, the diagnostic process, and the final fix.\n\n**3. IMPLEMENTATION STRATEGY & ARCHITECTURE:**\n- Summarize the proposed or decided-upon implementation plan. Detail any architectural decisions (e.g., microservices vs. monolith), data flow, API contracts, or database schema designs discussed.\n\n**4. KEY TECHNICAL OUTCOMES & LEARNINGS:**\n- State the final technical resolution. What was built, fixed, or designed? Summarize the most important technical knowledge shared, key decisions made, or specific skills demonstrated by the AI or learned by the user.",
+      "description": "Technical conversation breakdown focusing on code and implementation",
+      "max_tokens": 800
+    },
+    "creative": {
+      "name": "🎨 Creative Analysis",
+      "prompt": "You are a creative strategist and critic analyzing an artistic or creative conversation. Your task is to evaluate the creative journey and its output with an insightful and appreciative perspective.\n\nRULES:\n1. Adopt an analytical tone appropriate for creative work, focusing on the 'how' and 'why' behind creative choices.\n2. Use specific terminology related to the creative domain (e.g., narrative arc, color theory, harmonic progression, user flow) where applicable.\n3. Structure your analysis using the four specified headings to map the creative process from concept to conclusion.\n\nDIRECTIONS:\n\n**1. CORE CREATIVE CONCEPT:**\n- Describe the central creative endeavor. Is it a story, a poem, a logo design, a piece of music, a UI/UX concept? Define its genre, style, intended audience, and desired emotional tone or mood.\n\n**2. IDEATION & INSPIRATION:**\n- Detail the brainstorming process. What were the initial sources of inspiration or reference points? Trace how the core ideas evolved, noting key pivots or 'aha' moments. Mention significant alternative paths that were explored and why they were or were not chosen.\n\n**3. CREATIVE PROCESS & TECHNIQUES:**\n- Analyze the specific methods, tools, and techniques discussed or applied. For writing, this could be character development or world-building. For design, it could be layout principles or typography choices. Describe the step-by-step workflow or iterative process used to refine the concept.\n\n**4. ARTISTIC INSIGHTS & OUTCOME:**\n- Summarize the final creative product or refined concept. What are the key artistic takeaways from the process? Evaluate the work's potential for originality, coherence, and emotional impact. What new understanding of the creative process was uncovered?",
+      "description": "Creative conversation analysis focusing on artistic and innovative content",
+      "max_tokens": 800
+    }
+  },
+  "integration_settings": {
+    "persona_detection": true,
+    "multi_model_analysis": true,
+    "reasoning_extraction": true,
+    "complexity_scoring": true,
+    "auto_categorization": true,
+    "context_enhancement": true
+  },
+  "ui_settings": {
+    "default_theme": "auto",
+    "show_metadata": true,
+    "show_integration_badges": true,
+    "enable_export": true,
+    "auto_scroll": true,
+    "compact_mode": false,
+    "animation_enabled": true,
+    "copy_button": true
+  },
+  "prompt_enhancements": {
+    "persona_context": "This conversation involved AI personas. Note which personas participated and how they contributed their expertise.",
+    "multi_model_context": "This was a multi-model conversation with {model_count} AI models. Summarize how different models contributed different perspectives.",
+    "reasoning_context": "This conversation included {reasoning_blocks} reasoning processes. Summarize key insights from the thinking processes.",
+    "technical_context": "This conversation contained significant technical discussion. Focus on implementation details, code quality, and technical learning outcomes.",
+    "creative_context": "This conversation involved creative or artistic elements. Highlight the creative process, inspiration, and artistic insights."
+  },
+  "auto_categorization": {
+    "technical_keywords": [
+      "code",
+      "programming",
+      "function",
+      "variable",
+      "algorithm",
+      "debug",
+      "implementation",
+      "API",
+      "database",
+      "framework"
+    ],
+    "creative_keywords": [
+      "design",
+      "art",
+      "creative",
+      "story",
+      "music",
+      "write",
+      "paint",
+      "draw",
+      "aesthetic",
+      "artistic"
+    ],
+    "reasoning_indicators": [
+      "reasoning",
+      "thinking",
+      "analysis",
+      "logic",
+      "problem-solving",
+      "step-by-step"
+    ],
+    "complexity_thresholds": {
+      "simple": 2,
+      "moderate": 5,
+      "complex": 8,
+      "highly_complex": 12
+    }
+  },
+  "export_settings": {
+    "formats": [
+      "markdown",
+      "txt",
+      "json"
+    ],
+    "include_metadata": true,
+    "include_timestamp": true,
+    "include_integration_info": true
+  },
+  "_metadata": {
+    "version": "2.3.3",
+    "last_updated": "2025-08-01T00:00:00.000Z",
+    "plugin_directory": "conversation_summarizer",
+    "popup_ui": true,
+    "integration_ready": true,
+    "initial_setup": true,
+    "async_enabled": true,
+    "template_count": 4,
+    "supports_customization": true,
+    "supports_auto_categorization": true,
+    "supports_export": true,
+    "repository_url": "https://github.com/pkeffect/functions/tree/main/functions/filters/summarizer",
+    "documentation_url": "https://github.com/pkeffect/functions/blob/main/functions/filters/summarizer/README.md"
+  }
+}
