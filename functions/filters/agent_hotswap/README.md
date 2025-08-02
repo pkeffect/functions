@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 
-Universal AI persona switching for OpenWebUI with enhanced multi-persona support, streaming capabilities, and robust backup systems.
+Universal AI persona switching for Open WebUI with enhanced multi-persona support, streaming capabilities, and robust backup systems.
 
 ## ✨ Features
 
@@ -23,30 +23,29 @@ Universal AI persona switching for OpenWebUI with enhanced multi-persona support
 - **🔄 Persona Versioning** - Track changes and manage persona versions
 - **⚡ Stream Switching** - Real-time persona transitions during streaming (experimental)
 - **🛡️ Automatic Backups** - Intelligent backup system with change detection
-- **🔌 Plugin Integration** - Seamless integration with other OpenWebUI plugins
+- **🔌 Plugin Integration** - Seamless integration with other Open WebUI plugins
 
 ### 🎯 **Smart Capabilities**
 - **🧠 Content-aware Transitions** - Intelligent switching based on natural completion points
 - **🔍 Change Detection** - Automatic backups when personas are modified
-- **⚙️ Compatibility Mode** - Works with both modern and legacy OpenWebUI versions
+- **⚙️ Compatibility Mode** - Works with both modern and legacy Open WebUI versions
 - **🏃‍♂️ Async Operations** - High-performance asynchronous processing
 
 ## 📦 Installation
 
 ### **Requirements**
-- OpenWebUI v0.6.0+
+- Open WebUI v0.6.0+
 - Python packages: `pydantic>=2.0.0`, `aiofiles>=23.0.0`, `aiohttp>=3.8.0`
 
-### **Install via OpenWebUI**
+### **Install via Open WebUI**
 1. Go to **Admin Panel** → **Functions**
 2. Click **➕ Add Function**
 3. Copy and paste the Agent Hotswap code
 4. Save and enable the function
 
 ### **Install via Community Hub**
-1. Visit [OpenWebUI Community Functions](https://openwebui.com/functions)
-2. Search for "Agent Hotswap" by **pkeffect**
-3. Click **Get** → **Import to WebUI**
+1. Visit [Open WebUI Community Functions](https://openwebui.com/f/pkeffect/agent_hotswap)
+2. Click **Get** → **Import to WebUI**
 
 ## 🎮 Usage
 
@@ -136,7 +135,7 @@ The response smoothly transitions from teacher to writer mid-stream.
 
 ## 🔌 Plugin Integration
 
-Agent Hotswap integrates seamlessly with other OpenWebUI plugins:
+Agent Hotswap integrates seamlessly with other Open WebUI plugins:
 
 ### **Integration Context**
 Provides rich context to other plugins:
@@ -187,7 +186,7 @@ Perfect companion for multi-model plugins:
 
 **Backups not creating:**
 - Verify `enable_automatic_backups = true`
-- Check OpenWebUI logs for error messages
+- Check Open WebUI logs for error messages
 - Ensure sufficient disk space
 
 ### **Debug Information**
@@ -228,7 +227,7 @@ Create custom personas by editing `personas.json`:
 ### **Plugin Development**
 - **Integration hooks** - Use provided context for plugin communication
 - **Event system** - Subscribe to persona switching events
-- **API compatibility** - Standard OpenWebUI function interface
+- **API compatibility** - Standard Open WebUI function interface
 
 ## 📄 License
 
@@ -237,18 +236,18 @@ MIT License - See project repository for details.
 ## 🔗 Links
 
 - **🏠 Project Repository:** [GitHub](https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap)
-- **🌐 OpenWebUI Community:** [Functions Hub](https://openwebui.com/functions)
-- **💬 Support:** [OpenWebUI Discord](https://discord.gg/openwebui)
-- **📖 Documentation:** [OpenWebUI Docs](https://docs.openwebui.com/)
+- **🌐 Open WebUI Community:** [Functions Hub](https://Open WebUI.com/functions)
+- **💬 Support:** [Open WebUI Discord](https://discord.gg/5rJgQTnV4s)
+- **📖 Documentation:** [Open WebUI Docs](https://docs.Open WebUI.com/)
 
 ## 🙏 Acknowledgments
 
-- **OpenWebUI Team** - For the amazing platform
+- **Open WebUI Team** - For the amazing platform
 - **Community Contributors** - For feedback and persona suggestions
 - **Beta Testers** - For extensive testing and bug reports
 
 ---
 
-**Made with ❤️ for the OpenWebUI community**
+**Made with ❤️ for the Open WebUI community**
 
 *Enhance your AI conversations with dynamic persona switching!*
