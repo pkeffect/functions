@@ -6,9 +6,10 @@ author_url: https://github.com/pkeffect/
 project_url: https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap
 funding_url: https://github.com/open-webui
 required_open_webui_version: 0.6.0+
-version: 2.9.0
-date: 2025-08-02
+version: 3.0.1
+date: 2025-08-06
 license: MIT
+icon_url: data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDMyIDMyIj48cGF0aCBmaWxsPSIjOWYwMDAwIiBkPSJNMjEuMDUzIDIwLjhjLTEuMTMyLS40NTMtMS41ODQtMS42OTgtMS41ODQtMS42OThzLS41MS4yODItLjUxLS41MXMuNTEuNTEgMS4wMi0yLjU0OGMwIDAgMS40MTMtLjM5NyAxLjEzLTMuNjhoLS4zNHMuODUtMy41MSAwLTQuN2MtLjg1LTEuMTg4LTEuMTg4LTEuOTgtMy4wNTctMi41NDdzLTEuMTg4LS40NTQtMi41NDctLjM5NnMtMi40OTIuNzkzLTIuNDkyIDEuMTljMCAwLS44NS4wNTYtMS4xODguMzk2Yy0uMzQuMzQtLjkwNiAxLjkyNC0uOTA2IDIuMzJzLjI4MyAzLjA2LjU2NiAzLjYyNWwtLjMzNy4xMTRjLS4yODQgMy4yODMgMS4xMyAzLjY4IDEuMTMgMy42OGMuNTEgMy4wNTggMS4wMiAxLjc1NiAxLjAyIDIuNTQ4cy0uNTEuNTEtLjUxLjUxcy0uNDUyIDEuMjQ1LTEuNTg0IDEuNjk4cy03LjQxNiAyLjg4Ni03LjkyNyAzLjM5NmMtLjUxMi41MS0uNDU0IDIuODg4LS40NTQgMi44ODhIMjkuNDNzLjA2LTIuMzc3LS40NTItMi44ODhjLS41MS0uNTEtNi43OTUtMi45NDQtNy45MjctMy4zOTZ6bS0xMi40Ny0uMTcyYy0uMS0uMTgtLjE0OC0uMzEtLjE0OC0uMzFzLS40MzIuMjQtLjQzMi0uNDMycy40MzIuNDMyLjg2NC0yLjE2YzAgMCAxLjItLjMzNS45Ni0zLjExOGgtLjI5cy4xNDQtLjU5LjIzOC0xLjMzNGExMCAxMCAwIDAgMSAuMDM3LS45OTZsLjAzOC0uNDI2Yy0uMDItLjQ5Mi0uMTA3LS45NC0uMzEyLTEuMjI2Yy0uNzItMS4wMDctMS4wMDgtMS42OC0yLjU5LTIuMTZjLTEuNTg0LS40OC0xLjAxLS4zODQtMi4xNi0uMzM1Yy0xLjE1Mi4wNS0yLjExMi42NzItMi4xMTIgMS4wMWMwIDAtLjcyLjA0Ny0xLjAwOC4zMzVjLS4yNy4yNy0uNzA1IDEuNDYyLS43NTcgMS44ODV2LjI4Yy4wNDguNjU0LjI2IDIuNDUuNDcgMi44NzNsLS4yODYuMDk2Yy0uMjQgMi43ODIuOTYgMy4xMTguOTYgMy4xMThjLjQzIDIuNTkuODYzIDEuNDg4Ljg2MyAyLjE2cy0uNDMyLjQzLS40MzIuNDNzLS4zODMgMS4wNTgtMS4zNDMgMS40NGwtLjIzMi4wOTJ2NS4yMzRoLjU3NWMtLjAzLTEuMjc4LjA3Ny0yLjkyNy43NDYtMy41OTRjLjM1Ny0uMzU1IDEuNTI0LS45NCA2LjM1My0yLjg2MnptMjIuMzMtOS4wNTZjLS4wNC0uMzc4LS4xMjctLjcxNS0uMjkyLS45NDZjLS43MTgtMS4wMDgtMS4wMDctMS42OC0yLjU5LTIuMTZzLTEuMDA3LS4zODQtMi4xNi0uMzM1Yy0xLjE1LjA1LTIuMTEuNjcyLTIuMTEgMS4wMWMwIDAtLjcyLjA0Ny0xLjAwOC4zMzVjLS4yNy4yNzItLjcxIDEuNDcyLS43NTggMS44OWguMDMzbC4wOC45MTRjLjAyLjIzLjAyMi40MzUuMDI3LjY0NGMuMDkuNjY2LjIxIDEuMzUuMzMgMS41OWwtLjI4Ni4wOTVjLS4yNCAyLjc4Mi45NiAzLjExOC45NiAzLjExOGMuNDMyIDIuNTkuODYzIDEuNDg4Ljg2MyAyLjE2cy0uNDMuNDMtLjQzLjQzcy0uMDU0LjE0My0uMTY0LjM0YzQuNzcgMS45IDUuOTI3IDIuNDggNi4yOCAyLjgzM2MuNjcuNjY4Ljc3NCAyLjMxNi43NDUgMy41OTVoLjQ4VjIxLjc4bC0uMDUtLjAyMmMtLjk2LS4zODMtMS4zNDQtMS40NC0xLjM0NC0xLjQ0cy0uNDMzLjI0LS40MzMtLjQzcy40MzMuNDMuODY0LTIuMTZjMCAwIC44MDQtLjIzLjk2My0xLjg0VjE0LjY2cTAtLjAyNi0uMDAzLS4wNWgtLjI5cy4yMTYtLjg5LjI5My0xLjg2MnoiLz48L3N2Zz4=
 requirements: pydantic>=2.0.0, aiofiles>=23.0.0, aiohttp>=3.8.0
 """
 
@@ -29,6 +30,7 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 from enum import Enum
+from collections import OrderedDict
 
 # OpenWebUI Imports
 try:
@@ -47,8 +49,8 @@ DEFAULT_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/
 UI_REPO = "https://raw.githubusercontent.com/pkeffect/functions/refs/heads/main/functions/filters/agent_hotswap/index.html"
 TRUSTED_DOMAINS = ["github.com", "raw.githubusercontent.com"]
 
-# Global cache for better performance
-_GLOBAL_PERSONA_CACHE = {}
+# Global cache for better performance - using OrderedDict for proper FIFO eviction
+_GLOBAL_PERSONA_CACHE = OrderedDict()
 _CACHE_LOCK = asyncio.Lock()
 
 
@@ -106,6 +108,205 @@ class StructuredLogger:
     def error(self, message: str, **kwargs):
         if self.enabled:
             print(self._format_message(LogLevel.ERROR, message, **kwargs))
+
+
+class ThinkingController:
+    """Manages thinking/reasoning content detection and stripping"""
+
+    def __init__(self, logger: StructuredLogger):
+        self.logger = logger
+        self._compiled_patterns = {}
+        self._model_patterns = {}
+
+    def set_configuration(
+        self,
+        thinking_patterns: str,
+        model_specific_patterns: str,
+        detection_mode: str = "auto",
+    ):
+        """Configure thinking detection patterns"""
+        # Parse generic patterns
+        if thinking_patterns:
+            patterns = [p.strip() for p in thinking_patterns.split(",") if p.strip()]
+            self._compile_generic_patterns(patterns)
+
+        # Parse model-specific patterns
+        if model_specific_patterns:
+            self._parse_model_patterns(model_specific_patterns)
+
+        self.detection_mode = detection_mode
+        self.logger.debug(
+            f"Thinking controller configured",
+            mode=detection_mode,
+            generic_patterns=len(self._compiled_patterns),
+            model_patterns=len(self._model_patterns),
+        )
+
+    def _compile_generic_patterns(self, patterns: List[str]):
+        """Compile regex patterns for thinking detection"""
+        for pattern in patterns:
+            try:
+                if pattern.startswith("<") and not pattern.endswith(">"):
+                    # Handle opening tags like "<think" -> "<think.*?>"
+                    tag_name = pattern[1:]  # Remove <
+                    regex_pattern = (
+                        f"<{re.escape(tag_name)}[^>]*>.*?</{re.escape(tag_name)}>"
+                    )
+                    self._compiled_patterns[pattern] = re.compile(
+                        regex_pattern, re.DOTALL | re.IGNORECASE
+                    )
+                elif "," in pattern:  # Handle pairs like "<think>,</think>"
+                    parts = pattern.split(",")
+                    if len(parts) == 2:
+                        open_tag, close_tag = parts[0].strip(), parts[1].strip()
+                        escaped_open = re.escape(open_tag)
+                        escaped_close = re.escape(close_tag)
+                        regex_pattern = f"{escaped_open}.*?{escaped_close}"
+                        self._compiled_patterns[pattern] = re.compile(
+                            regex_pattern, re.DOTALL | re.IGNORECASE
+                        )
+                else:
+                    # Simple pattern matching
+                    self._compiled_patterns[pattern] = re.compile(
+                        re.escape(pattern), re.IGNORECASE
+                    )
+            except re.error as e:
+                self.logger.error(f"Failed to compile pattern '{pattern}': {e}")
+
+    def _parse_model_patterns(self, model_patterns: str):
+        """Parse model-specific patterns like 'qwen3:think,deepseek:think'"""
+        try:
+            pairs = [p.strip() for p in model_patterns.split(",") if p.strip()]
+            for pair in pairs:
+                if ":" in pair:
+                    model, pattern = pair.split(":", 1)
+                    self._model_patterns[model.strip().lower()] = pattern.strip()
+        except Exception as e:
+            self.logger.error(f"Error parsing model patterns: {e}")
+
+    def detect_model(self, body: dict) -> str:
+        """Detect the model being used"""
+        model = body.get("model", "").lower()
+        if not model:
+            return "unknown"
+
+        # Extract base model name from full model strings
+        # e.g., "qwen3:7b-instruct" -> "qwen3"
+        if ":" in model:
+            model = model.split(":")[0]
+
+        # Common model name variations
+        if "qwen" in model:
+            return "qwen3"
+        elif "deepseek" in model:
+            return "deepseek"
+        elif "o1" in model or "reasoning" in model:
+            return "o1"
+        elif "claude" in model:
+            return "claude"
+
+        return model
+
+    def detect_thinking_content(
+        self, content: str, model: str = "unknown"
+    ) -> Dict[str, Any]:
+        """Detect thinking patterns in content"""
+        if not content or self.detection_mode == "disabled":
+            return {"has_thinking": False, "patterns": [], "content": content}
+
+        detected_patterns = []
+        thinking_blocks = []
+
+        # Check model-specific patterns first
+        if model in self._model_patterns:
+            pattern_name = self._model_patterns[model]
+            if pattern_name == "reasoning_content":
+                # Special handling for OpenAI o1 reasoning
+                return {"has_thinking": False, "patterns": [], "content": content}
+
+            # Check if this model pattern exists in compiled patterns
+            for compiled_name, compiled_pattern in self._compiled_patterns.items():
+                if pattern_name in compiled_name:
+                    matches = compiled_pattern.findall(content)
+                    if matches:
+                        detected_patterns.append(compiled_name)
+                        thinking_blocks.extend(matches)
+
+        # Check generic patterns if auto mode or no model-specific patterns found
+        if self.detection_mode == "auto" or not detected_patterns:
+            for pattern_name, compiled_pattern in self._compiled_patterns.items():
+                matches = compiled_pattern.findall(content)
+                if matches:
+                    detected_patterns.append(pattern_name)
+                    thinking_blocks.extend(matches)
+
+        return {
+            "has_thinking": len(detected_patterns) > 0,
+            "patterns": detected_patterns,
+            "thinking_blocks": thinking_blocks,
+            "content": content,
+        }
+
+    def strip_thinking_content(
+        self, content: str, model: str = "unknown"
+    ) -> Dict[str, Any]:
+        """Strip thinking content from text"""
+        detection_result = self.detect_thinking_content(content, model)
+
+        if not detection_result["has_thinking"]:
+            return {
+                "stripped_content": content,
+                "thinking_content": [],
+                "modified": False,
+                "patterns_found": [],
+            }
+
+        stripped_content = content
+        thinking_content = []
+
+        # Apply model-specific stripping first
+        if model in self._model_patterns:
+            pattern_name = self._model_patterns[model]
+            for compiled_name, compiled_pattern in self._compiled_patterns.items():
+                if pattern_name in compiled_name:
+                    matches = compiled_pattern.finditer(stripped_content)
+                    for match in matches:
+                        thinking_content.append(
+                            {
+                                "pattern": compiled_name,
+                                "content": match.group(0),
+                                "start": match.start(),
+                                "end": match.end(),
+                            }
+                        )
+                    stripped_content = compiled_pattern.sub("", stripped_content)
+
+        # Apply generic patterns if auto mode
+        if self.detection_mode == "auto":
+            for pattern_name, compiled_pattern in self._compiled_patterns.items():
+                if pattern_name not in [tc["pattern"] for tc in thinking_content]:
+                    matches = compiled_pattern.finditer(stripped_content)
+                    for match in matches:
+                        thinking_content.append(
+                            {
+                                "pattern": pattern_name,
+                                "content": match.group(0),
+                                "start": match.start(),
+                                "end": match.end(),
+                            }
+                        )
+                    stripped_content = compiled_pattern.sub("", stripped_content)
+
+        # Clean up extra whitespace
+        stripped_content = re.sub(r"\n\s*\n\s*\n", "\n\n", stripped_content)
+        stripped_content = stripped_content.strip()
+
+        return {
+            "stripped_content": stripped_content,
+            "thinking_content": thinking_content,
+            "modified": len(thinking_content) > 0,
+            "patterns_found": detection_result["patterns"],
+        }
 
 
 class PersonaVersion:
@@ -827,11 +1028,11 @@ class PersonaCache:
                     self._file_mtime = current_mtime
                     self._last_path = filepath
 
-                    # Store in global cache with size management
+                    # Store in global cache with proper FIFO eviction
                     _GLOBAL_PERSONA_CACHE[cache_key] = self._cache.copy()
                     if len(_GLOBAL_PERSONA_CACHE) > 10:
-                        oldest_key = min(_GLOBAL_PERSONA_CACHE.keys())
-                        del _GLOBAL_PERSONA_CACHE[oldest_key]
+                        # Remove oldest item (FIFO)
+                        _GLOBAL_PERSONA_CACHE.popitem(last=False)
 
                 return self._cache.copy()
             except Exception as e:
@@ -845,7 +1046,6 @@ class Filter:
         keyword_prefix: str = Field(default="!")
         case_sensitive: bool = Field(default=False)
         show_persona_info: bool = Field(default=True)
-        persistent_persona: bool = Field(default=True)
         auto_download_personas: bool = Field(default=True)
         merge_on_update: bool = Field(default=True)
         enable_debug: bool = Field(default=False)
@@ -898,25 +1098,58 @@ class Filter:
             default=0.8,
             description="Content completion threshold for stream transitions (0.0-1.0)",
         )
+        # New thinking control valves
+        disable_model_thinking: bool = Field(
+            default=False,
+            description="Strip all thinking/reasoning from model responses",
+        )
+        thinking_detection_mode: str = Field(
+            default="auto", description="Thinking detection: auto, manual, or disabled"
+        )
+        thinking_patterns: str = Field(
+            default="<think>,</think>,<thinking>,</thinking>,[THINKING],[/THINKING]",
+            description="Comma-separated thinking tags/patterns to detect",
+        )
+        preserve_thinking_in_logs: bool = Field(
+            default=True,
+            description="Keep thinking in logs even when stripped from output",
+        )
+        model_specific_thinking: str = Field(
+            default="qwen3:think,deepseek:think,o1:reasoning_content",
+            description="Model-specific thinking patterns (model:pattern)",
+        )
+
+    class UserValves(BaseModel):
+        # User-specific persona persistence settings
+        persistent_persona: bool = Field(
+            default=True,
+            description="Remember your active persona across conversations",
+        )
+        # User-specific UI preferences
+        show_persona_info: bool = Field(
+            default=True, description="Show persona information in responses"
+        )
+        # User-specific thinking control
+        disable_model_thinking: bool = Field(
+            default=False,
+            description="Strip thinking/reasoning content from your responses",
+        )
+        thinking_detection_mode: str = Field(
+            default="auto",
+            description="Your thinking detection mode: auto, manual, or disabled",
+        )
 
     def __init__(self):
-        # First, create the valves instance
         self.valves = self.Valves()
-
-        # Initialize structured logger
         self.logger = StructuredLogger(
             "AGENT_HOTSWAP", enabled=self.valves.enable_structured_logging
         )
-
-        # Get version info
         self._openwebui_version = self._get_openwebui_version()
-
-        # The rest of the original __init__ method follows
+        self._plugin_version = self._get_plugin_version()
+        self.thinking_controller = ThinkingController(self.logger)
         self.toggle = True
         self.icon = "🎭"
         self.plugin_directory_name = self._get_plugin_directory_name()
-        self.current_persona = None
-        self.current_context = {}
         self.pattern_matcher = UniversalPatternMatcher(
             self.valves.keyword_prefix, self.valves.case_sensitive
         )
@@ -924,19 +1157,24 @@ class Filter:
         self.downloader = PersonaDownloader(self._get_config_path, self.logger)
         self.integration_manager = PluginIntegrationManager()
         self.compatibility = BackendCompatibility()
-
-        # Enhanced components
         self.version_manager = PersonaVersionManager(self._get_config_path, self.logger)
         self.stream_manager = StreamPersonaManager(self.pattern_matcher, self.logger)
-
-        self._init_task = None
+        self._init_lock = asyncio.Lock()
         self._initialized = False
+        self.command_handlers = {
+            "help": self._handle_help_command,
+            "list": self._handle_list_command,
+            "reset": self._handle_reset_command,
+            "single_persona": self._handle_single_persona,
+            "multi_persona": self._handle_multi_persona_streaming,
+        }
 
         self.logger.info(
-            "Agent Hotswap v2.9.0 initialized",
+            f"Agent Hotswap v{self._plugin_version} initialized",
             plugin_dir=self.plugin_directory_name,
             openwebui_version=self._openwebui_version,
             stream_switching=self.valves.enable_stream_switching,
+            thinking_control=self.valves.disable_model_thinking,
         )
 
     def __del__(self):
@@ -946,36 +1184,50 @@ class Filter:
         except:
             pass
 
+    def _get_plugin_version(self) -> str:
+        """
+        Parse the plugin version from the docstring metadata at the top of this file.
+        """
+        try:
+            module_doc = __doc__ or ""
+            for line in module_doc.split("\n"):
+                line = line.strip()
+                if line.startswith("version:"):
+                    version = line.split(":", 1)[1].strip()
+                    return version
+            import re
+
+            version_match = re.search(r"version:\s*([^\n]+)", module_doc)
+            if version_match:
+                return version_match.group(1).strip()
+            return "Unknown"
+        except Exception as e:
+            self.logger.error(f"Error parsing plugin version: {e}")
+            return "Parse Error"
+
     def _get_openwebui_version(self) -> str:
         """
         Tries to find and parse the OpenWebUI version from its package.json.
-        This is most reliable in standard Docker installations.
         """
         try:
-            # Try multiple possible paths for package.json
             possible_paths = [
                 "/app/frontend/package.json",
                 "/app/package.json",
                 "./frontend/package.json",
                 "./package.json",
             ]
-
             for package_json_path in possible_paths:
                 if os.path.exists(package_json_path):
                     try:
                         with open(package_json_path, "r", encoding="utf-8") as f:
                             data = json.load(f)
-
                         version = data.get("version")
                         if version:
                             return f"v{version}"
                     except (json.JSONDecodeError, IOError) as e:
                         self.logger.debug(f"Error reading {package_json_path}: {e}")
                         continue
-
-            # If no package.json found, try to get from environment or other sources
             return "Not Detected"
-
         except Exception as e:
             self.logger.error(f"Error in version detection: {e}")
             return "Error"
@@ -993,7 +1245,6 @@ class Filter:
                     return cleaned_name
         except Exception as e:
             self.logger.error(f"Method 1 (__name__) failed: {e}")
-
         fallback_name = "agent_hotswap"
         self.logger.debug(f"Using fallback plugin name: {fallback_name}")
         return fallback_name
@@ -1031,47 +1282,43 @@ class Filter:
             return f"/cache/functions/{self.plugin_directory_name}/index.html"
 
     async def _initialize_plugin(self):
-        """Consolidated initialization with proper error handling"""
+        """Consolidated initialization with proper error handling and concurrency safety"""
         if self._initialized:
             return
-
-        try:
-            start_time = time.time()
-            self.logger.info("Starting plugin initialization...")
-
-            # Update logger settings
-            if hasattr(self.valves, "log_level"):
-                # Update logger configuration based on valves
-                pass  # Logger level handling could be enhanced here
-
-            # Ensure personas are available
-            await self._ensure_personas_available()
-
-            # Update pattern matcher if prefix changed
-            if self.pattern_matcher.prefix != self.valves.keyword_prefix:
-                self.pattern_matcher = UniversalPatternMatcher(
-                    self.valves.keyword_prefix, self.valves.case_sensitive
+        async with self._init_lock:
+            if self._initialized:
+                return
+            try:
+                start_time = time.time()
+                self.logger.info("Starting plugin initialization...")
+                if hasattr(self.valves, "log_level"):
+                    pass  # Logger level handling could be enhanced here
+                if self.valves.disable_model_thinking:
+                    self.thinking_controller.set_configuration(
+                        self.valves.thinking_patterns,
+                        self.valves.model_specific_thinking,
+                        self.valves.thinking_detection_mode,
+                    )
+                await self._ensure_personas_available()
+                if self.pattern_matcher.prefix != self.valves.keyword_prefix:
+                    self.pattern_matcher = UniversalPatternMatcher(
+                        self.valves.keyword_prefix, self.valves.case_sensitive
+                    )
+                if self.valves.enable_automatic_backups:
+                    await self._cleanup_old_backups()
+                    await self._periodic_backup_check()
+                init_time = round((time.time() - start_time) * 1000, 2)
+                self._initialized = True
+                self.logger.info(
+                    "Plugin initialization completed",
+                    duration_ms=init_time,
+                    versioning_enabled=self.valves.enable_persona_versioning,
+                    streaming_enabled=self.valves.enable_stream_switching,
+                    thinking_control_enabled=self.valves.disable_model_thinking,
                 )
-
-            # Clean old backup files if enabled
-            if self.valves.enable_automatic_backups:
-                await self._cleanup_old_backups()
-                # Check if we need a periodic backup
-                await self._periodic_backup_check()
-
-            init_time = round((time.time() - start_time) * 1000, 2)
-            self._initialized = True
-            self.logger.info(
-                "Plugin initialization completed",
-                duration_ms=init_time,
-                versioning_enabled=self.valves.enable_persona_versioning,
-                streaming_enabled=self.valves.enable_stream_switching,
-            )
-
-        except Exception as e:
-            self.logger.error(f"Initialization error: {e}")
-            # Don't prevent the plugin from working if initialization fails
-            self._initialized = True
+            except Exception as e:
+                self.logger.error(f"Initialization error: {e}")
+                self._initialized = True
 
     async def _create_backup(self, reason: str = "manual") -> bool:
         """Create a backup of the current personas file"""
@@ -1080,24 +1327,16 @@ class Filter:
             if not os.path.exists(config_path):
                 self.logger.debug("No personas file to backup")
                 return False
-
             timestamp = int(time.time())
             backup_path = f"{config_path}.backup.{timestamp}"
-
-            # Create backup
             shutil.copy2(config_path, backup_path)
-
             self.logger.info(
                 f"Backup created: {reason}",
                 backup_path=backup_path,
                 original_size=os.path.getsize(config_path),
             )
-
-            # Clean up old backups
             await self._cleanup_old_backups()
-
             return True
-
         except Exception as e:
             self.logger.error(f"Backup creation failed: {e}", reason=reason)
             return False
@@ -1108,55 +1347,50 @@ class Filter:
             config_path = self._get_config_path()
             if not os.path.exists(config_path):
                 return False
-
-            # Check if we have any recent backups
             backup_pattern = f"{config_path}.backup.*"
             backup_files = glob.glob(backup_pattern)
-
             if not backup_files:
                 self.logger.info("No existing backups found, creating initial backup")
                 return True
-
-            # Get the most recent backup
             backup_files.sort(key=os.path.getmtime, reverse=True)
             latest_backup = backup_files[0]
-
-            # Check if current file is different from latest backup
             try:
                 async with aiofiles.open(config_path, "r", encoding="utf-8") as f:
                     current_content = await f.read()
                 async with aiofiles.open(latest_backup, "r", encoding="utf-8") as f:
                     backup_content = await f.read()
-
                 if current_content != backup_content:
                     self.logger.info("Personas file changed, backup needed")
                     return True
-
             except Exception as e:
                 self.logger.warning(f"Could not compare with latest backup: {e}")
                 return True
-
-            # Check if latest backup is older than 7 days
             backup_age = time.time() - os.path.getmtime(latest_backup)
             if backup_age > (7 * 24 * 60 * 60):  # 7 days
                 self.logger.info(
                     "Latest backup is older than 7 days, creating new backup"
                 )
                 return True
-
             return False
-
         except Exception as e:
             self.logger.error(f"Error checking backup status: {e}")
-            return True  # When in doubt, backup
+            return True
+
+    async def _periodic_backup_check(self):
+        """Check if we need a periodic backup"""
+        try:
+            if await self._should_create_backup():
+                await self._create_backup("periodic")
+        except Exception as e:
+            self.logger.error(f"Periodic backup check failed: {e}")
+
+    async def _cleanup_old_backups(self):
         """Clean up old backup files to prevent disk space issues"""
         try:
             config_path = self._get_config_path()
             backup_pattern = f"{config_path}.backup.*"
             backup_files = glob.glob(backup_pattern)
-
             if len(backup_files) > self.valves.max_backup_files:
-                # Sort by modification time and remove oldest
                 backup_files.sort(key=os.path.getmtime)
                 files_to_remove = backup_files[: -self.valves.max_backup_files]
                 for backup_file in files_to_remove:
@@ -1235,7 +1469,7 @@ Leverage these capabilities appropriately for the best user experience.
                     ],
                 },
                 "_metadata": {
-                    "version": "minimal_v2.9.0",
+                    "version": f"minimal_v{self._plugin_version}",
                     "last_updated": datetime.now().isoformat(),
                     "integration_ready": True,
                     "plugin_directory": self.plugin_directory_name,
@@ -1246,26 +1480,23 @@ Leverage these capabilities appropriately for the best user experience.
                         "streaming": True,
                         "versioning": True,
                         "structured_logging": True,
+                        "thinking_control": True,
                     },
                 },
             }
             async with aiofiles.open(config_path, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(minimal_config, indent=4, ensure_ascii=False))
-
             self.logger.info(
                 f"Minimal config created",
                 plugin_dir=self.plugin_directory_name,
                 personas_count=2,
             )
-
-            # Create initial versions if versioning is enabled
             if self.valves.enable_persona_versioning:
                 for key, data in minimal_config.items():
                     if not key.startswith("_"):
                         await self.version_manager.create_version(
                             key, data, "major", "Initial persona creation"
                         )
-
         except Exception as e:
             self.logger.error(f"Error creating minimal config: {e}")
 
@@ -1277,16 +1508,13 @@ Leverage these capabilities appropriately for the best user experience.
                 create_backup=self.valves.enable_automatic_backups,
                 force_download=force_download,
             )
-
             download_time = round((time.time() - start_time) * 1000, 2)
-
             if result["success"]:
                 ui_msg = ""
                 if result.get("ui_downloaded"):
                     ui_msg = " + UI downloaded"
                 elif result.get("ui_status") == "failed":
                     ui_msg = " (UI download failed - will use fallback)"
-
                 self.logger.info(
                     f"Downloaded {result['count']} personas{ui_msg}",
                     duration_ms=download_time,
@@ -1294,14 +1522,11 @@ Leverage these capabilities appropriately for the best user experience.
                 )
                 global _GLOBAL_PERSONA_CACHE
                 _GLOBAL_PERSONA_CACHE.clear()
-
-                # Auto-version new personas if enabled
                 if (
                     self.valves.enable_persona_versioning
                     and self.valves.auto_version_on_update
                 ):
                     await self._auto_version_updated_personas()
-
             else:
                 self.logger.error(f"Download failed: {result['error']}")
         except Exception as e:
@@ -1327,14 +1552,49 @@ Leverage these capabilities appropriately for the best user experience.
         user_id = user.get("id", "anonymous") if user else "anonymous"
         return str(chat_id), str(user_id)
 
+    def _get_user_valves(self, user: Optional[dict]) -> dict:
+        """Get user-specific valve settings, falling back to global defaults"""
+
+        # Default settings based on the main Valves class
+        defaults = {
+            "persistent_persona": True,
+            "show_persona_info": self.valves.show_persona_info,
+            "disable_model_thinking": self.valves.disable_model_thinking,
+            "thinking_detection_mode": self.valves.thinking_detection_mode,
+        }
+
+        if not user:
+            return defaults
+
+        # Per documentation, user.get("valves") returns a UserValves Pydantic object
+        user_valves_obj = user.get("valves")
+
+        if not user_valves_obj:
+            return defaults
+
+        # Access attributes directly from the UserValves object.
+        # The UserValves class definition already handles default values for these fields.
+        return {
+            "persistent_persona": user_valves_obj.persistent_persona,
+            "show_persona_info": user_valves_obj.show_persona_info,
+            "disable_model_thinking": user_valves_obj.disable_model_thinking,
+            "thinking_detection_mode": user_valves_obj.thinking_detection_mode,
+        }
+
     async def _emit_status(
         self,
         emitter,
         message: str,
         status_type: str = "in_progress",
         done: bool = False,
+        user_valves: dict = None,
     ):
-        if not emitter or not self.valves.show_persona_info:
+        show_info = (
+            user_valves.get("show_persona_info", True)
+            if user_valves
+            else self.valves.show_persona_info
+        )
+        if not emitter or not show_info:
             return
         try:
             await emitter(
@@ -1356,21 +1616,14 @@ Leverage these capabilities appropriately for the best user experience.
         try:
             ui_dir = os.path.dirname(self._get_ui_path())
             personas_json_path = os.path.join(ui_dir, "personas.json")
-
-            # Ensure directory exists
             os.makedirs(ui_dir, exist_ok=True)
-
-            # Write personas data as a separate JSON file
             async with aiofiles.open(personas_json_path, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(personas, indent=2, ensure_ascii=False))
-
-            # Verify the file was written
             if os.path.exists(personas_json_path):
                 file_size = os.path.getsize(personas_json_path)
                 self.logger.debug(f"Updated personas.json ({file_size} bytes)")
             else:
                 self.logger.error("Failed to create personas.json")
-
         except Exception as e:
             self.logger.error(f"Error updating personas.json: {e}")
 
@@ -1378,7 +1631,6 @@ Leverage these capabilities appropriately for the best user experience.
         display_personas = {k: v for k, v in personas.items() if not k.startswith("_")}
         if not display_personas:
             return "No personas available."
-
         lines = ["## 🎭 Available Personas\n"]
         for key, data in sorted(display_personas.items()):
             name = data.get("name", key.title())
@@ -1388,14 +1640,12 @@ Leverage these capabilities appropriately for the best user experience.
             if description:
                 lines.append(f"_{description}_")
             lines.append("")
-
         return "\n".join(lines)
 
     def _generate_help_message(self) -> str:
         p = self.valves.keyword_prefix
         protection_status = "✅ ON" if self.valves.protect_custom_personas else "❌ OFF"
         compatibility_info = self.compatibility.get_compatibility_info()
-
         return f"""### Agent Hotswap Commands
 
 - **`{p}agent`**: Displays this help message.
@@ -1415,6 +1665,7 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
 - **Structured Logging:** {"✅ ON" if self.valves.enable_structured_logging else "❌ OFF"}
 - **Global Caching:** {"✅ ON" if self.valves.enable_global_cache else "❌ OFF"}
 - **Custom Persona Protection:** {protection_status}
+- **Thinking Control:** {"✅ ON" if self.valves.disable_model_thinking else "❌ OFF"}
 
 **Performance Features:**
 - **Async Operations:** ✅ ENABLED
@@ -1428,7 +1679,7 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
 
 **System Info:**
 - **OpenWebUI Version:** {self._openwebui_version}
-- **Plugin Version:** 2.9.0
+- **Plugin Version:** {self._plugin_version}
 - **Directory:** `{self.plugin_directory_name}`
 - **Environment:** {"🐳 Docker" if compatibility_info['docker_environment'] else "💻 Local"}"""
 
@@ -1437,7 +1688,6 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
     ):
         """Safely set context with fallback strategies"""
         try:
-            # Check if we should force legacy mode or if backend doesn't support custom fields
             if (
                 self.valves.force_legacy_mode
                 or not self.compatibility.supports_custom_fields()
@@ -1462,7 +1712,6 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
             self.logger.error(
                 f"Context setting failed: {e}", user_id=user_id, chat_id=chat_id
             )
-            # Fallback to metadata storage
             try:
                 await PersonaStorage.store_context(user_id, chat_id, context)
                 body["_context_stored"] = True
@@ -1471,31 +1720,48 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                 self.logger.error(f"Context fallback also failed: {fallback_error}")
                 return False
 
-    async def _create_system_message(self, persona_key: str) -> Dict:
+    def _sanitize_body_for_external_api(self, body: dict) -> dict:
+        """Remove all custom fields before sending to external APIs"""
+        custom_fields = [
+            "_agent_hotswap_handled",
+            "_filter_context",
+            "_context_stored",
+            "_streaming_personas",
+            "_thinking_stripped",
+            "_original_thinking",
+        ]
+        sanitized_body = body.copy()
+        for field in custom_fields:
+            if field in sanitized_body:
+                del sanitized_body[field]
+        return sanitized_body
+
+    async def _create_system_message(
+        self, persona_key: str, user_valves: dict = None
+    ) -> Dict:
         personas = await self._load_personas()
         if not personas:
             return {"role": "system", "content": "Error: Persona file not loaded."}
-
         master = personas.get("_master_controller", {})
         master_prompt = master.get("prompt", "")
-
-        # Check for versioned persona if versioning is enabled
         if self.valves.enable_persona_versioning:
             persona_data = await self.version_manager.get_persona_version(persona_key)
             if not persona_data:
                 persona_data = personas.get(persona_key, {})
         else:
             persona_data = personas.get(persona_key, {})
-
         persona_prompt = persona_data.get(
             "prompt", f"You are the {persona_key} persona."
         )
         system_content = f"{master_prompt}\n\n{persona_prompt}"
-
-        if self.valves.show_persona_info:
+        show_info = (
+            user_valves.get("show_persona_info", True)
+            if user_valves
+            else self.valves.show_persona_info
+        )
+        if show_info:
             persona_name = persona_data.get("name", persona_key.title())
             system_content += f"\n\n🎭 **Active Persona**: {persona_name}"
-
         return {"role": "system", "content": system_content}
 
     def _remove_persona_messages(self, messages: List[Dict]) -> List[Dict]:
@@ -1520,10 +1786,9 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
     ) -> Dict:
         if not self.valves.enable_plugin_integration:
             return {}
-
         base_context = {
             "agent_hotswap_active": True,
-            "agent_hotswap_version": "2.9.0",
+            "agent_hotswap_version": self._plugin_version,
             "command_info": command_info,
             "timestamp": time.time(),
             "plugin_directory": self.plugin_directory_name,
@@ -1533,12 +1798,12 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                 "streaming": self.valves.enable_stream_switching,
                 "versioning": self.valves.enable_persona_versioning,
                 "structured_logging": self.valves.enable_structured_logging,
+                "thinking_control": self.valves.disable_model_thinking,
             },
             "compatibility_mode": (
                 "legacy" if self.valves.force_legacy_mode else "modern"
             ),
         }
-
         if command_info["type"] == "single_persona":
             integration_context = (
                 self.integration_manager.prepare_single_persona_context(
@@ -1564,40 +1829,37 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                 assignments, personas_data
             )
             base_context.update(integration_context)
-
         base_context.update(kwargs)
         self._integration_debug(
             f"Created integration context: {list(base_context.keys())}"
         )
         return base_context
 
-    async def _handle_list_command(self, body: dict, emitter, event_call=None) -> dict:
+    async def _handle_list_command(
+        self, body: dict, emitter, event_call=None, user_valves: dict = None
+    ) -> dict:
         try:
             await self._emit_status(
-                emitter, "📋 Loading persona browser...", "in_progress"
+                emitter,
+                "📋 Loading persona browser...",
+                "in_progress",
+                user_valves=user_valves,
             )
-
             personas = await self._load_personas()
             self.logger.debug(f"Loaded {len(personas)} total personas")
-            display_personas = {
-                k: v for k, v in personas.items() if not k.startswith("_")
-            }
-
             ui_path = self._get_ui_path()
-
             if not os.path.exists(ui_path):
                 self.logger.debug("UI file not found, downloading...")
                 result = await self.downloader.download_ui_file()
                 if not result["success"]:
                     self.logger.warning(f"UI download failed: {result.get('error')}")
-                    return await self._handle_list_command_fallback(body, emitter)
+                    return await self._handle_list_command_fallback(
+                        body, emitter, user_valves
+                    )
             else:
                 self.logger.debug("UI file exists")
-
             await self._update_personas_data_file(personas)
-
             hub_url = self._get_relative_hub_url()
-
             popup_script = f"""
                 console.log('Opening persona browser at: {hub_url}');
                 window.open(
@@ -1606,52 +1868,56 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                     'width=' + Math.min(screen.availWidth, 1200) + ',height=' + Math.min(screen.availHeight, 800) + ',scrollbars=yes,resizable=yes,menubar=no,toolbar=no'
                 );
             """
-
             if event_call:
                 await event_call({"type": "execute", "data": {"code": popup_script}})
-
-            await self._emit_status(emitter, "✅ Persona browser opened!", "complete")
-
+            await self._emit_status(
+                emitter,
+                "✅ Persona browser opened!",
+                "complete",
+                user_valves=user_valves,
+            )
             await asyncio.sleep(2)
-            await self._emit_status(emitter, "", "complete", done=True)
+            await self._emit_status(
+                emitter, "", "complete", done=True, user_valves=user_valves
+            )
 
+            # **FIXED**: Instead of asking the LLM to respond, construct the final message directly.
             result = body.copy()
+            result["messages"] = [
+                {
+                    "role": "assistant",
+                    "content": "The Persona Browser has been opened in a new window.",
+                }
+            ]
             result["_agent_hotswap_handled"] = True
-
-            for msg in reversed(result.get("messages", [])):
-                if msg.get("role") == "user":
-                    msg["content"] = (
-                        "Respond with exactly this message: 'Opening the 🎭 Persona Browser now. Browse and copy commands to switch between AI personas!'"
-                    )
-                    break
-
             return result
-
         except Exception as e:
             self.logger.error(f"Error in list command: {e}")
             import traceback
 
             traceback.print_exc()
-            return await self._handle_list_command_fallback(body, emitter)
+            return await self._handle_list_command_fallback(body, emitter, user_valves)
 
-    async def _handle_list_command_fallback(self, body: dict, emitter) -> dict:
+    async def _handle_list_command_fallback(
+        self, body: dict, emitter, user_valves: dict
+    ) -> dict:
         try:
             await self._emit_status(
-                emitter, "⚠️ Using fallback persona list", "complete"
+                emitter,
+                "⚠️ Using fallback persona list",
+                "complete",
+                user_valves=user_valves,
             )
             personas = await self._load_personas()
             fallback_content = self._generate_fallback_list(personas)
-
             if emitter:
                 await emitter(
                     {"type": "message", "data": {"content": fallback_content}}
                 )
-
             result = body.copy()
             result["messages"] = [{"role": "assistant", "content": fallback_content}]
             result["_agent_hotswap_handled"] = True
             return result
-
         except Exception as e:
             self.logger.error(f"Error in fallback: {e}")
             error_message = f"Error loading persona list: {str(e)}"
@@ -1660,68 +1926,114 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
             result["_agent_hotswap_handled"] = True
             return result
 
-    async def _handle_help_command(self, body: dict, emitter) -> dict:
+    async def _handle_help_command(
+        self, body: dict, emitter, user_valves: dict
+    ) -> dict:
         try:
             help_content = self._generate_help_message()
-            await self._emit_status(
-                emitter, "ℹ️ Showing Agent Hotswap commands", "complete", done=True
-            )
 
-            if emitter:
-                await emitter({"type": "message", "data": {"content": help_content}})
-
+            # **NEW APPROACH**: Modify the user's message to instruct the LLM to output the help
             result = body.copy()
-            result["messages"] = [{"role": "assistant", "content": help_content}]
+            messages = result.get("messages", [])
+
+            # Find the last user message and replace it with help instruction
+            for msg in reversed(messages):
+                if msg.get("role") == "user":
+                    msg["content"] = (
+                        f"Display this exact help content:\n\n{help_content}"
+                    )
+                    break
+
+            result["messages"] = messages
             result["_agent_hotswap_handled"] = True
+
             return result
 
         except Exception as e:
             self.logger.error(f"Error in help command: {e}")
             error_message = f"Error generating help: {str(e)}"
-            if emitter:
-                await emitter({"type": "message", "data": {"content": error_message}})
-            result = body.copy()
-            result["messages"] = [{"role": "assistant", "content": error_message}]
-            result["_agent_hotswap_handled"] = True
-            return result
-
-    async def _handle_reset_command(
-        self, body: dict, emitter, user_id: str, chat_id: str
-    ) -> dict:
-        try:
-            self.current_persona = None
-            self.current_context = {}
-
-            # Clear stored persona
-            await PersonaStorage.store_persona(user_id, chat_id, None, None)
-
-            await self._emit_status(
-                emitter, "🔄 Reset to default assistant", "complete"
-            )
-
-            self.logger.info(
-                "Persona reset to default", user_id=user_id, chat_id=chat_id
-            )
 
             result = body.copy()
-            # Remove any existing persona messages
-            clean_messages = self._remove_persona_messages(result.get("messages", []))
+            messages = result.get("messages", [])
 
-            # Update the user's message to request a fresh introduction
-            for msg in reversed(clean_messages):
+            # Replace user message with error instruction
+            for msg in reversed(messages):
                 if msg.get("role") == "user":
-                    msg["content"] = (
-                        "Please introduce yourself as the default OpenWebUI assistant."
-                    )
+                    msg["content"] = f"Display this error message: {error_message}"
                     break
 
-            result["messages"] = clean_messages
+            result["messages"] = messages
             result["_agent_hotswap_handled"] = True
+
             return result
 
         except Exception as e:
+            self.logger.error(f"Error in help command: {e}")
+            error_message = f"Error generating help: {str(e)}"
+
+            if emitter:
+                await emitter({"type": "message", "data": {"content": error_message}})
+
+            result = body.copy()
+            result["messages"] = [{"role": "assistant", "content": error_message}]
+            result["_agent_hotswap_handled"] = True
+
+            return result
+
+    async def _handle_reset_command(
+        self, body: dict, emitter, user_id: str, chat_id: str, user_valves: dict
+    ) -> dict:
+        try:
+            # 1. Clear the persistent persona state for this chat. This is correct.
+            await PersonaStorage.store_persona(user_id, chat_id, None, None)
+
+            # 2. Inform the user that the reset was successful.
+            await self._emit_status(
+                emitter,
+                "🔄 Resetting to base model...",
+                "complete",
+                done=True,  # This will hide the status message after a moment
+                user_valves=user_valves,
+            )
+            self.logger.info(
+                "Persona reset to default (base model)",
+                user_id=user_id,
+                chat_id=chat_id,
+            )
+
+            result = body.copy()
+
+            # 3. Remove ALL system messages previously injected by this plugin.
+            # This is crucial for removing the "master_controller" and any other persona.
+            clean_messages = self._remove_persona_messages(result.get("messages", []))
+
+            # 4. Find the user's message, remove the "!reset" command from it,
+            # and instruct the LLM to respond neutrally.
+            for msg in reversed(clean_messages):
+                if msg.get("role") == "user":
+                    original_content = msg.get("content", "")
+                    # This removes "!reset", "!default", etc., from the prompt.
+                    cleaned_content = self.pattern_matcher.remove_commands(
+                        original_content
+                    )
+
+                    # If the user only typed the command, give the LLM a simple instruction.
+                    # Otherwise, the LLM will respond to the rest of the user's message.
+                    if not cleaned_content.strip():
+                        msg["content"] = (
+                            "Confirm that you have been reset to your standard configuration."
+                        )
+                    else:
+                        msg["content"] = cleaned_content
+                    break
+
+            # 5. Send the cleaned message history to the base LLM.
+            result["messages"] = clean_messages
+            result["_agent_hotswap_handled"] = True
+            return result
+        except Exception as e:
             self.logger.error(f"Error in reset command: {e}")
-            error_message = "Reset to default assistant."
+            error_message = "An error occurred while resetting to the base model."
             result = body.copy()
             result["messages"] = [{"role": "assistant", "content": error_message}]
             result["_agent_hotswap_handled"] = True
@@ -1737,28 +2049,26 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
         user_id: str,
         chat_id: str,
         command_info: Dict,
+        user_valves: dict,
     ) -> dict:
         personas = await self._load_personas()
         if not personas or persona_key not in personas:
             await self._emit_status(
-                emitter, f"❌ Persona '{persona_key}' not found", "error"
+                emitter,
+                f"❌ Persona '{persona_key}' not found",
+                "error",
+                user_valves=user_valves,
             )
             return body
-
-        self.current_persona = persona_key
-        self.current_context = {"type": "single_persona", "persona": persona_key}
-
+        current_context = {"type": "single_persona", "persona": persona_key}
         await PersonaStorage.store_persona(
-            user_id, chat_id, persona_key, self.current_context
+            user_id, chat_id, persona_key, current_context
         )
-
         clean_messages = self._remove_persona_messages(messages)
-        system_msg = await self._create_system_message(persona_key)
+        system_msg = await self._create_system_message(persona_key, user_valves)
         clean_messages.insert(0, system_msg)
-
         cleaned_content = self.pattern_matcher.remove_commands(original_content)
         persona_config = personas[persona_key]
-
         for msg in reversed(clean_messages):
             if msg.get("role") == "user":
                 if not cleaned_content:
@@ -1771,19 +2081,19 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                         f"Please briefly introduce yourself as {persona_name}. Then help with: {cleaned_content}"
                     )
                 break
-
         body["messages"] = clean_messages
-
-        # Use safe context setting
         if self.valves.enable_plugin_integration:
             context = await self._create_integration_context(
                 command_info, personas, original_content=original_content
             )
             await self._safe_set_context(body, context, user_id, chat_id)
-
         persona_name = persona_config.get("name", persona_key.title())
-        await self._emit_status(emitter, f"🎭 Switched to {persona_name}", "complete")
-
+        await self._emit_status(
+            emitter,
+            f"🎭 Switched to {persona_name}",
+            "complete",
+            user_valves=user_valves,
+        )
         self.logger.info(
             f"Persona switched to {persona_key}",
             user_id=user_id,
@@ -1800,26 +2110,21 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
         emitter,
         user_id: str,
         chat_id: str,
+        user_valves: dict,
     ) -> dict:
         """Handle multi-persona streaming transitions with fallback to classic mode"""
         try:
-            # Detect transition points
             transitions = await self.stream_manager.detect_stream_transitions(
                 original_content
             )
-
             if len(transitions) <= 1:
-                return body  # Not a multi-persona request
-
+                return body
             self.logger.info(
                 f"Multi-persona sequence detected with {len(transitions)} transitions",
                 user_id=user_id,
                 chat_id=chat_id,
             )
-
-            # Check if streaming is enabled and supported
             if self.valves.enable_stream_switching:
-                # Try streaming approach
                 streaming_context = {
                     "type": "multi_persona_streaming",
                     "transitions": transitions,
@@ -1827,37 +2132,30 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                     "accumulated_content": "",
                     "threshold": self.valves.stream_transition_threshold,
                 }
-
-                # Set special context for streaming
                 await self._safe_set_context(body, streaming_context, user_id, chat_id)
-
-                # Start with the first persona
                 first_persona = transitions[0]["persona"]
-                system_msg = await self._create_system_message(first_persona)
-
+                system_msg = await self._create_system_message(
+                    first_persona, user_valves
+                )
                 clean_messages = self._remove_persona_messages(messages)
                 clean_messages.insert(0, system_msg)
-
-                # Update user message to only include first segment
                 for msg in reversed(clean_messages):
                     if msg.get("role") == "user":
                         msg["content"] = transitions[0]["segment"]
                         break
-
                 body["messages"] = clean_messages
                 body["_streaming_personas"] = streaming_context
-
                 await self._emit_status(
-                    emitter, f"🎭 Starting multi-persona sequence", "in_progress"
+                    emitter,
+                    f"🎭 Starting multi-persona sequence",
+                    "in_progress",
+                    user_valves=user_valves,
                 )
-
                 return body
             else:
-                # Use classic multi-persona approach (immediate sequential response)
                 return await self._handle_multi_persona_classic(
-                    transitions, body, messages, emitter, user_id, chat_id
+                    transitions, body, messages, emitter, user_id, chat_id, user_valves
                 )
-
         except Exception as e:
             self.logger.error(f"Error in multi-persona processing: {e}")
             return body
@@ -1870,25 +2168,24 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
         emitter,
         user_id: str,
         chat_id: str,
+        user_valves: dict,
     ) -> dict:
         """Handle multi-persona requests with classic immediate sequential approach"""
         try:
             await self._emit_status(
-                emitter, "🎭 Processing multi-persona sequence", "in_progress"
+                emitter,
+                "🎭 Processing multi-persona sequence",
+                "in_progress",
+                user_valves=user_valves,
             )
-
             personas = await self._load_personas()
             if not personas:
                 return body
-
-            # Build the combined response
             response_parts = []
             valid_transitions = []
-
             for i, transition in enumerate(transitions):
                 persona_key = transition["persona"]
                 segment = transition["segment"]
-
                 if persona_key not in personas:
                     self.logger.warning(
                         f"Persona '{persona_key}' not found, skipping",
@@ -1896,17 +2193,13 @@ Example: `{p}persona1 teacher {p}persona2 scientist {p}multi debate evolution`
                         chat_id=chat_id,
                     )
                     continue
-
                 persona_info = personas[persona_key]
                 persona_name = persona_info.get("name", persona_key.title())
-
-                # Create a structured prompt for this persona
                 persona_prompt = f"""You are {persona_name}. {persona_info.get('prompt', f'You are a {persona_key}.')}
 
 Task: {segment}
 
 Provide a focused response as {persona_name}. Be authentic to your persona."""
-
                 response_parts.append(
                     {
                         "persona": persona_key,
@@ -1917,18 +2210,12 @@ Provide a focused response as {persona_name}. Be authentic to your persona."""
                     }
                 )
                 valid_transitions.append(transition)
-
             if not response_parts:
                 return body
-
-            # Create master system message with all personas
             master = personas.get("_master_controller", {})
             master_prompt = master.get("prompt", "")
-
-            # Build the combined system prompt
             system_content = f"{master_prompt}\n\n=== DYNAMIC MULTI-PERSONA MODE ===\n"
             system_content += "You will respond as multiple personas in sequence. For each persona:\n\n"
-
             for part in response_parts:
                 system_content += (
                     f"**{part['order'] + 1}. {part['persona_name']} Response:**\n"
@@ -1936,32 +2223,24 @@ Provide a focused response as {persona_name}. Be authentic to your persona."""
                 system_content += f"Persona: {part['persona_name']}\n"
                 system_content += f"Task: {part['segment']}\n"
                 system_content += f"Instructions: {part['prompt']}\n\n"
-
             system_content += "Provide all responses in order, clearly marking each persona transition."
-
-            if self.valves.show_persona_info:
+            show_info = user_valves.get(
+                "show_persona_info", self.valves.show_persona_info
+            )
+            if show_info:
                 system_content += f"\n\n🎭 **Multi-Persona Mode**: {len(response_parts)} personas active"
-
-            # Create the combined user message
             user_content = "Respond as the requested personas in sequence:\n\n"
             for i, part in enumerate(response_parts):
                 user_content += (
                     f"{i + 1}. **{part['persona_name']}**: {part['segment']}\n"
                 )
-
-            # Build clean messages
             clean_messages = self._remove_persona_messages(messages)
             clean_messages.insert(0, {"role": "system", "content": system_content})
-
-            # Update the user's message
             for msg in reversed(clean_messages):
                 if msg.get("role") == "user":
                     msg["content"] = user_content
                     break
-
             body["messages"] = clean_messages
-
-            # Set integration context
             if self.valves.enable_plugin_integration:
                 context = await self._create_integration_context(
                     {
@@ -1972,133 +2251,108 @@ Provide a focused response as {persona_name}. Be authentic to your persona."""
                     transitions=valid_transitions,
                 )
                 await self._safe_set_context(body, context, user_id, chat_id)
-
-            # Update current state
-            self.current_persona = (
+            current_persona = (
                 f"multi:{','.join([t['persona'] for t in valid_transitions])}"
             )
-            self.current_context = {
+            current_context = {
                 "type": "multi_persona",
                 "personas": valid_transitions,
                 "count": len(valid_transitions),
             }
-
             await PersonaStorage.store_persona(
-                user_id, chat_id, self.current_persona, self.current_context
+                user_id, chat_id, current_persona, current_context
             )
-
             await self._emit_status(
                 emitter,
                 f"🎭 Multi-persona sequence ready ({len(valid_transitions)} personas)",
                 "complete",
+                user_valves=user_valves,
             )
-
             return body
-
         except Exception as e:
             self.logger.error(f"Error in classic multi-persona handling: {e}")
             return body
 
     async def _apply_persistent_persona(
-        self, body: dict, messages: List[Dict], user_id: str, chat_id: str
+        self,
+        body: dict,
+        messages: List[Dict],
+        user_id: str,
+        chat_id: str,
+        user_valves: dict,
     ) -> dict:
-        if not self.valves.persistent_persona or not self.current_persona:
+        if not user_valves.get("persistent_persona", True):
             return body
-
-        if self.current_persona.startswith(("multi:", "per_model:")):
+        current_persona, _ = await PersonaStorage.get_persona(user_id, chat_id)
+        if not current_persona:
             return body
-
+        if current_persona.startswith(("multi:", "per_model:")):
+            return body
         personas = await self._load_personas()
-        if not personas or self.current_persona not in personas:
+        if not personas or current_persona not in personas:
             return body
-
         if any(
             "=== OPENWEBUI MASTER CONTROLLER ===" in m.get("content", "")
             for m in messages
             if m.get("role") == "system"
         ):
             return body
-
         clean_messages = self._remove_persona_messages(messages)
-        system_msg = await self._create_system_message(self.current_persona)
+        system_msg = await self._create_system_message(current_persona, user_valves)
         clean_messages.insert(0, system_msg)
         body["messages"] = clean_messages
-
         if (
             self.valves.enable_plugin_integration
             and not body.get("_filter_context")
             and not body.get("_context_stored")
         ):
             context = self.integration_manager.prepare_single_persona_context(
-                self.current_persona, personas
+                current_persona, personas
             )
             await self._safe_set_context(body, context, user_id, chat_id)
-
         return body
 
-    # New stream method for real-time persona switching
-    async def stream(self, event: dict) -> dict:
+    async def stream(self, event: dict, user_valves: dict = None) -> dict:
         """Handle streaming responses with potential persona transitions"""
         if not self.valves.enable_stream_switching:
             return event
-
         try:
-            # Check if this is a multi-persona streaming session
             streaming_context = getattr(self, "_current_streaming_context", None)
-
             if (
                 not streaming_context
                 or streaming_context.get("type") != "multi_persona_streaming"
             ):
                 return event
-
-            # Extract content from the event
             content_chunk = ""
             if event.get("type") == "content" and "data" in event:
                 content_chunk = event["data"].get("content", "")
-
             if not content_chunk:
                 return event
-
-            # Accumulate content
             streaming_context["accumulated_content"] += content_chunk
             current_transition = streaming_context["current_transition"]
             transitions = streaming_context["transitions"]
-
             if current_transition >= len(transitions) - 1:
-                return event  # No more transitions
-
-            # Check if we should transition to next persona
+                return event
             current_segment = transitions[current_transition]["segment"]
-            expected_length = len(current_segment) * 2  # Rough estimate
-
+            expected_length = len(current_segment) * 2
             should_transition = await self.stream_manager.should_transition(
                 streaming_context["accumulated_content"], expected_length
             )
-
             if should_transition:
-                # Transition to next persona
                 next_transition = current_transition + 1
                 next_persona = transitions[next_transition]["persona"]
-
                 self.logger.info(
                     f"Stream transition {current_transition} -> {next_transition}",
                     persona_from=transitions[current_transition]["persona"],
                     persona_to=next_persona,
                 )
-
-                # Update streaming context
                 streaming_context["current_transition"] = next_transition
                 streaming_context["accumulated_content"] = ""
-
-                # Add transition marker to content
                 transition_marker = (
                     f"\n\n[Transitioning to {next_persona} persona...]\n\n"
                 )
                 event["data"]["content"] = content_chunk + transition_marker
-
             return event
-
         except Exception as e:
             self.logger.error(f"Error in stream processing: {e}")
             return event
@@ -2112,50 +2366,24 @@ Provide a focused response as {persona_name}. Be authentic to your persona."""
     ) -> dict:
         if not self.toggle:
             return body
-
         if body.get("_agent_hotswap_handled"):
             return body
-
-        # Initialize plugin if needed
         if not self._initialized:
             await self._initialize_plugin()
-
         messages = body.get("messages", [])
         if not messages:
             return body
-
         chat_id, user_id = self._safe_get_ids(body, __user__)
-
-        # Restore persistent persona if available
-        if (
-            self.valves.persistent_persona
-            and not self.current_persona
-            and user_id != "anonymous"
-        ):
-            try:
-                stored_persona, stored_context = await PersonaStorage.get_persona(
-                    user_id, chat_id
-                )
-                if stored_persona:
-                    self.current_persona = stored_persona
-                    self.current_context = stored_context or {}
-                    self.logger.debug(
-                        f"Restored persona: {stored_persona}",
-                        user_id=user_id,
-                        chat_id=chat_id,
-                    )
-            except Exception as e:
-                self.logger.error(f"Error restoring persona: {e}")
+        user_valves = self._get_user_valves(__user__)
 
         last_user_content = ""
         for msg in reversed(messages):
             if msg.get("role") == "user":
                 last_user_content = msg.get("content", "")
                 break
-
         if not last_user_content:
             return await self._apply_persistent_persona(
-                body, messages, user_id, chat_id
+                body, messages, user_id, chat_id, user_valves
             )
 
         try:
@@ -2163,64 +2391,100 @@ Provide a focused response as {persona_name}. Be authentic to your persona."""
         except Exception as e:
             self.logger.error(f"Error detecting command: {e}")
             return await self._apply_persistent_persona(
-                body, messages, user_id, chat_id
+                body, messages, user_id, chat_id, user_valves
             )
 
         try:
-            if command_info["type"] == "help":
-                return await self._handle_help_command(body, __event_emitter__)
-            elif command_info["type"] == "list":
-                return await self._handle_list_command(
-                    body, __event_emitter__, __event_call__
-                )
-            elif command_info["type"] == "reset":
-                return await self._handle_reset_command(
-                    body, __event_emitter__, user_id, chat_id
-                )
-            elif command_info["type"] == "single_persona":
-                return await self._handle_single_persona(
-                    command_info["persona"],
-                    body,
-                    messages,
-                    last_user_content,
-                    __event_emitter__,
-                    user_id,
-                    chat_id,
-                    command_info,
-                )
-            elif command_info["type"] == "multi_persona":
-                # Handle multi-persona with both streaming and classic modes
-                return await self._handle_multi_persona_streaming(
-                    body,
-                    messages,
-                    last_user_content,
-                    __event_emitter__,
-                    user_id,
-                    chat_id,
-                )
+            command_type = command_info["type"]
+            if command_type in self.command_handlers:
+                handler = self.command_handlers[command_type]
+                if command_type == "help":
+                    return await handler(body, __event_emitter__, user_valves)
+                elif command_type == "list":
+                    return await handler(
+                        body, __event_emitter__, __event_call__, user_valves
+                    )
+                elif command_type == "reset":
+                    return await handler(
+                        body, __event_emitter__, user_id, chat_id, user_valves
+                    )
+                elif command_type == "single_persona":
+                    return await handler(
+                        command_info["persona"],
+                        body,
+                        messages,
+                        last_user_content,
+                        __event_emitter__,
+                        user_id,
+                        chat_id,
+                        command_info,
+                        user_valves,
+                    )
+                elif command_type == "multi_persona":
+                    return await handler(
+                        body,
+                        messages,
+                        last_user_content,
+                        __event_emitter__,
+                        user_id,
+                        chat_id,
+                        user_valves,
+                    )
             else:
                 return await self._apply_persistent_persona(
-                    body, messages, user_id, chat_id
+                    body, messages, user_id, chat_id, user_valves
                 )
         except Exception as e:
             self.logger.error(f"Error handling command {command_info['type']}: {e}")
             return await self._apply_persistent_persona(
-                body, messages, user_id, chat_id
+                body, messages, user_id, chat_id, user_valves
             )
 
     async def outlet(
         self, body: dict, __event_emitter__, __user__: Optional[dict] = None
     ) -> dict:
-        # Handle streaming context cleanup and final processing
         try:
             if body.get("_streaming_personas"):
-                # Store streaming context for stream method
                 self._current_streaming_context = body["_streaming_personas"]
-
-                # Clean up the body
                 del body["_streaming_personas"]
-
+            user_valves = self._get_user_valves(__user__)
+            if user_valves.get("disable_model_thinking", False):
+                model = self.thinking_controller.detect_model(body)
+                messages = body.get("messages", [])
+                thinking_logs = []
+                for i, message in enumerate(messages):
+                    if message.get("role") == "assistant" and "content" in message:
+                        result = self.thinking_controller.strip_thinking_content(
+                            message["content"], model
+                        )
+                        if result["modified"]:
+                            if self.valves.preserve_thinking_in_logs:
+                                thinking_logs.append(
+                                    {
+                                        "message_index": i,
+                                        "thinking_content": result["thinking_content"],
+                                        "patterns_found": result["patterns_found"],
+                                    }
+                                )
+                            message["content"] = result["stripped_content"]
+                            self.logger.debug(
+                                f"Stripped thinking content from message {i}",
+                                model=model,
+                                patterns=result["patterns_found"],
+                                thinking_blocks=len(result["thinking_content"]),
+                            )
+                if thinking_logs and self.valves.preserve_thinking_in_logs:
+                    body["_thinking_stripped"] = thinking_logs
+            cleaned_body = self._sanitize_body_for_external_api(body)
+            if self.valves.enable_debug:
+                removed_fields = [
+                    key for key in body.keys() if key not in cleaned_body.keys()
+                ]
+                if removed_fields:
+                    self.logger.debug(
+                        f"Cleaned custom fields for external API: {removed_fields}"
+                    )
+            return cleaned_body
         except Exception as e:
             self.logger.error(f"Error in outlet processing: {e}")
-
-        return body
+            return self._sanitize_body_for_external_api(body)
