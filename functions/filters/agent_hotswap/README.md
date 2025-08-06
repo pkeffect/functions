@@ -2,7 +2,7 @@
 
 > **⚠️ IMPORTANT WARNING**: Do not change the name of this plugin after installing. It is best to just reinstall as a new name if you need to rename it.
 
-[![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)](https://github.com/open-webui/functions)
+[![Version](https://img.shields.io/badge/version-3.0.1-blue.svg)](https://github.com/open-webui/functions)
 [![Open WebUI](https://img.shields.io/badge/Open%20WebUI-v0.5.0+-green.svg)](https://github.com/open-webui/open-webui)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
