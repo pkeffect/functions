@@ -238,7 +238,7 @@ MIT License - See project repository for details.
 - **🏠 Project Repository:** [GitHub](https://github.com/pkeffect/functions/tree/main/functions/filters/agent_hotswap)
 - **🌐 Open WebUI Community:** [Functions Hub](https://openwebui.com/functions)
 - **💬 Support:** [Open WebUI Discord](https://discord.gg/5rJgQTnV4s)
-- **📖 Documentation:** [Open WebUI Docs](https://docs.Open WebUI.com/)
+- **📖 Documentation:** [Open WebUI Docs](https://docs.openwebui.com/)
 
 ## 🙏 Acknowledgments
 
