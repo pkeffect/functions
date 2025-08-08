@@ -2,12 +2,12 @@
 
 > ⚠️ **Work in Progress** - This filter is actively being developed. Results may vary and features are subject to change. Please report issues and provide feedback!
 
-An advanced multi-model orchestration filter for Open WebUI that enables seamless conversations between multiple local AI models with enhanced persona integration and reasoning capabilities.
+An advanced multi-model orchestration filter for Open WebUI that enables seamless conversations between multiple AI models with enhanced persona integration and reasoning capabilities.
 
 ## 🚀 Features
 
 ### 🤖 Multi-Model Orchestration
-- Run conversations with 2-4 local Ollama models simultaneously
+- Run conversations with 2-4 models simultaneously
 - Three conversation modes: General, Collaboration, and Debate
 - Enhanced model display with icons and persona awareness
 - Real-time streaming responses with formatted output
@@ -32,7 +32,7 @@ An advanced multi-model orchestration filter for Open WebUI that enables seamles
 ## 📋 Requirements
 
 - **Open WebUI** v0.6.0 or higher
-- **Ollama** with at least 2 local models installed
+- **Models** get some
 - **Agent Hotswap Filter** (recommended for persona features)
 - **Python** dependencies included in Open WebUI
 
@@ -85,7 +85,7 @@ An advanced multi-model orchestration filter for Open WebUI that enables seamles
 ### Filter Settings (Valves)
 
 #### 🤖 Model Configuration
-- **model_1-4**: Select your local Ollama models
+- **model_1-4**: Select your models
 - **max_turns_per_model**: Responses per model (1-5, default: 2)
 - **response_temperature**: Creativity level (0.0-1.0, default: 0.7)
 - **max_tokens**: Response length (50-2000, default: 500)
@@ -152,7 +152,6 @@ An advanced multi-model orchestration filter for Open WebUI that enables seamles
 > ⚠️ **This is a work in progress** - expect inconsistencies and bugs!
 
 ### Current Limitations
-- **Local Models Only** - No API model support yet
 - **Variable Response Quality** - Results depend heavily on model selection
 - **Persona Assignment** - May not work consistently with all models
 - **Memory Usage** - Multiple simultaneous models can be resource-intensive
@@ -165,7 +164,7 @@ An advanced multi-model orchestration filter for Open WebUI that enables seamles
 - Stream processing can occasionally fail
 
 ### Troubleshooting
-1. **Models not responding**: Check `ollama list` and model availability
+1. **Models not responding**: Check model availability
 2. **Personas not working**: Ensure Agent Hotswap is installed and running
 3. **Poor quality responses**: Try different model combinations
 4. **Timeouts**: Increase response timeout in settings
@@ -249,3 +248,4 @@ MIT License - See filter header for details
 > 🎭 **Remember**: This is experimental software. Results will vary based on your models, hardware, and configuration. Start with simple tests and gradually explore advanced features!
 
 **Happy multi-model conversations!** 🚀
+
