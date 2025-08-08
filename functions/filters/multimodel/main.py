@@ -1,9 +1,9 @@
 """
-title: Multi-Model
+title: Multi-Model Conversation Filter - Enhanced Integration
 description: Advanced multi-model orchestration with seamless Agent Hotswap integration and enhanced reasoning capabilities
 author: assistant & pkeffect
-version: 3.2.0
-required_open_webui_version: 0.6.0
+version: 3.2.1
+required_open_webui_version: 0.5.0
 license: MIT
 """
 
@@ -27,39 +27,29 @@ logger.setLevel(logging.INFO)
 
 
 def get_available_models() -> List[str]:
-    """Get all available local models from OpenWebUI"""
+    """Get ALL models from OpenWebUI's app state."""
+    # Use a set to automatically handle duplicates
     models = {"-- Select Model --"}
 
     try:
         from open_webui.main import app
 
         if hasattr(app, "state") and hasattr(app.state, "MODELS"):
-            state_models = app.state.MODELS
-            if state_models and isinstance(state_models, dict):
-                for model_id in state_models.keys():
-                    if model_id and isinstance(model_id, str):
-                        # Only include local models (contain ":")
-                        if ":" in model_id and "/" not in model_id:
-                            models.add(model_id)
+            # Get all string keys from the MODELS dictionary, no filtering for local-only
+            model_ids = {k for k in app.state.MODELS.keys() if isinstance(k, str)}
+            if model_ids:
+                models.update(model_ids)
+                logger.info(f"[MultiModel] Loaded {len(model_ids)} models from app state.")
+            else:
+                logger.warning("[MultiModel] app.state.MODELS was found but empty.")
+        else:
+            logger.warning("[MultiModel] Could not find app.state.MODELS.")
     except Exception as e:
-        logger.debug(f"App state access failed: {e}")
+        logger.error(f"[MultiModel] Error loading models from app state: {e}")
 
-    try:
-        db_models = Models.get_all_models()
-        if db_models:
-            for model in db_models:
-                model_id = getattr(model, "id", None)
-                if model_id and isinstance(model_id, str):
-                    # Only include local models
-                    if ":" in model_id and "/" not in model_id:
-                        models.add(str(model_id))
-    except Exception as e:
-        logger.debug(f"Database models failed: {e}")
-
-    unique_models = sorted(list(models))
-
-    # Add some common fallback local models if list is short
-    if len(unique_models) < 5:
+    # Keep the fallback logic for robustness if state loading fails or returns few models
+    if len(models) < 5:
+        logger.info("[MultiModel] Model list is short, adding common fallbacks.")
         fallback_models = [
             "llama3.2:latest",
             "llama3.1:latest",
@@ -69,14 +59,10 @@ def get_available_models() -> List[str]:
             "phi3:latest",
             "deepseek-r1:latest",
         ]
-        seen = set(unique_models)
-        for model in fallback_models:
-            if model not in seen:
-                unique_models.append(model)
-                seen.add(model)
-        unique_models = sorted(unique_models)
+        models.update(fallback_models)
 
-    return unique_models
+    # Return a sorted list for a consistent UI
+    return sorted(list(models))
 
 
 class AgentHotswapIntegration:
@@ -501,7 +487,7 @@ class Filter:
 
         model_1: str = Field(
             default=AVAILABLE_MODELS[0],
-            description="First local model",
+            description="First model for conversation",
             json_schema_extra={"enum": AVAILABLE_MODELS},
         )
         model_2: str = Field(
@@ -510,7 +496,7 @@ class Filter:
                 if len(AVAILABLE_MODELS) > 1
                 else AVAILABLE_MODELS[0]
             ),
-            description="Second local model",
+            description="Second model for conversation",
             json_schema_extra={"enum": AVAILABLE_MODELS},
         )
         model_3: str = Field(
@@ -519,7 +505,7 @@ class Filter:
                 if len(AVAILABLE_MODELS) > 2
                 else AVAILABLE_MODELS[0]
             ),
-            description="Third local model (optional)",
+            description="Third model for conversation (optional)",
             json_schema_extra={"enum": AVAILABLE_MODELS},
         )
         model_4: str = Field(
@@ -528,7 +514,7 @@ class Filter:
                 if len(AVAILABLE_MODELS) > 3
                 else AVAILABLE_MODELS[0]
             ),
-            description="Fourth local model (optional)",
+            description="Fourth model for conversation (optional)",
             json_schema_extra={"enum": AVAILABLE_MODELS},
         )
 
@@ -968,7 +954,7 @@ IMPORTANT: You are {persona_name}. Maintain this persona throughout the conversa
             # Show just model name
             header = f"""
 > {icon} **{display_name}**{reasoning_indicator}  
-> *Local Model • Turn {turn_number}*
+> *Model • Turn {turn_number}*
 
 """
 
@@ -1060,7 +1046,7 @@ IMPORTANT: You are {persona_name}. Maintain this persona throughout the conversa
             persona_summary = f" in {persona_config.get('name', 'persona')} mode"
 
         output.append(
-            f"> ✅ **Conversation completed with {len(conversation['models'])} local models{persona_summary}**"
+            f"> ✅ **Conversation completed with {len(conversation['models'])} models{persona_summary}**"
         )
 
         return "\n".join(output)
@@ -1093,7 +1079,7 @@ IMPORTANT: You are {persona_name}. Maintain this persona throughout the conversa
 
         await self._emit_status(
             emitter,
-            f"🎭 Starting {mode} conversation with {len(models)} local models{persona_info_text}...",
+            f"🎭 Starting {mode} conversation with {len(models)} models{persona_info_text}...",
             5,
         )
 
@@ -1265,13 +1251,13 @@ IMPORTANT: You are {persona_name}. Maintain this persona throughout the conversa
             await self._emit_status(emitter, "❌ All models failed", 100, done=True)
             return """## ❌ Multi-Model Conversation Failed
 
-All selected local models failed to generate responses.
+All selected models failed to generate responses.
 
 ### 🔧 Troubleshooting:
-- Check if Ollama models are installed: `ollama list`
+- Check if the models are pulled and available: `ollama list`
 - Pull missing models: `ollama pull model-name`
 - Try `!multi test` to diagnose issues
-- Ensure Ollama is running and accessible
+- Ensure the model server (e.g., Ollama) is running and accessible
 
 ### 💡 Common Working Models:
 - **llama3.2:latest** - Good general purpose model
@@ -1335,19 +1321,16 @@ All selected local models failed to generate responses.
 - `!multi debate <topic>` - Start debate mode
 
 ### **🎭 Persona Integration Commands**
-```
-# Single persona for all models
+Single persona for all models
 !teacher !multi collab Explain quantum physics
-
-# Per-model persona assignments
+Per-model persona assignments
 !persona1 teacher !persona2 student !multi collab Explain quantum physics
 !persona1 ethicist !persona2 technologist !persona3 economist !persona4 policymaker !multi debate AI regulation
-
-# Quick examples with personas
+Quick examples with personas
 !scientist !multi debate Climate change solutions
 !persona1 coder !persona2 analyst !multi collab Database optimization
-```
-
+code
+Code
 ---
 
 ## 🎯 **Core Commands**
@@ -1453,10 +1436,9 @@ This filter seamlessly integrates with Agent Hotswap for advanced persona manage
 ## ⚙️ **Configuration & Setup**
 
 ### **Requirements:**
-- At least **2 local Ollama models** configured in filter settings
-- Models must be installed via `ollama pull model-name`
+- At least **2 models** configured in filter settings
 - **Agent Hotswap filter** for persona functionality
-- No API keys needed - **local models only**
+- No API keys needed
 
 ### **Integration Settings:**
 - **Enable Agent Hotswap Integration**: `true` (recommended)
@@ -1487,15 +1469,15 @@ Available in filter valves:
 ## 🧪 **Testing & Troubleshooting**
 
 ### **Quick Test:**
-```
 !multi test
-```
+code
+Code
 Shows your configuration, available models, reasoning capabilities, and persona integration status.
 
 ### **Persona Integration Test:**
-```
 !persona1 teacher !persona2 student !multi test
-```
+code
+Code
 Tests persona assignment and integration.
 
 ### **Common Issues:**
@@ -1557,7 +1539,7 @@ Tests persona assignment and integration.
 
             test_result = f"""# 🧪 Multi-Model Configuration Test - Enhanced Integration
 
-## 🤖 Available Local Models ({len(active_models)})
+## 🤖 Available Models ({len(active_models)})
 
 {chr(10).join(model_status) if model_status else "> ❌ **No models configured**"}
 
@@ -1594,21 +1576,18 @@ Tests persona assignment and integration.
 ## 🚀 Quick Start Examples
 
 ### Basic Multi-Model:
-```
 !multi What is the future of AI?
-```
-
+code
+Code
 ### With Single Persona:
-```
 !teacher !multi collab Explain quantum physics
-```
-
+code
+Code
 ### With Per-Model Personas:
-```
 !persona1 teacher !persona2 student !multi collab Explain machine learning
 !persona1 ethicist !persona2 technologist !multi debate AI regulation
-```
-
+code
+Code
 **🎭 Use `!agent list` to see all available personas!**
 """
 
@@ -1616,7 +1595,7 @@ Tests persona assignment and integration.
                 messages[last_message_index]["content"] = test_result
             return body
 
-        # Get active models (only local models)
+        # Get active models
         active_models = self._get_active_models()
         if len(active_models) < 2:
             if last_message_index >= 0:
@@ -1624,9 +1603,9 @@ Tests persona assignment and integration.
                     "content"
                 ] = f"""## ❌ Configuration Error
 
-Need at least 2 local models selected. Currently have {len(active_models)} model(s).
+Need at least 2 models selected. Currently have {len(active_models)} model(s).
 
-Please configure local Ollama models in the filter settings.
+Please configure models in the filter settings.
 
 ### 🎭 Enhanced Features Available:
 - **Persona Integration**: Use `!persona1 teacher !persona2 student` for role-based conversations
@@ -1676,7 +1655,7 @@ Please check your configuration and try again.
 ### 🎭 Troubleshooting:
 - Ensure Agent Hotswap filter is installed for persona features
 - Verify model configuration with `!multi test`
-- Check Ollama models: `ollama list`"""
+- Check model availability: `ollama list`"""
 
         return body
 
