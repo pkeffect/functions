@@ -39,27 +39,15 @@ def get_available_models() -> List[str]:
             model_ids = {k for k in app.state.MODELS.keys() if isinstance(k, str)}
             if model_ids:
                 models.update(model_ids)
-                logger.info(f"[MultiModel] Loaded {len(model_ids)} models from app state.")
+                logger.info(
+                    f"[MultiModel] Loaded {len(model_ids)} models from app state."
+                )
             else:
                 logger.warning("[MultiModel] app.state.MODELS was found but empty.")
         else:
             logger.warning("[MultiModel] Could not find app.state.MODELS.")
     except Exception as e:
         logger.error(f"[MultiModel] Error loading models from app state: {e}")
-
-    # Keep the fallback logic for robustness if state loading fails or returns few models
-    if len(models) < 5:
-        logger.info("[MultiModel] Model list is short, adding common fallbacks.")
-        fallback_models = [
-            "llama3.2:latest",
-            "llama3.1:latest",
-            "qwen2.5:latest",
-            "mistral:latest",
-            "codellama:latest",
-            "phi3:latest",
-            "deepseek-r1:latest",
-        ]
-        models.update(fallback_models)
 
     # Return a sorted list for a consistent UI
     return sorted(list(models))
