@@ -1,8 +1,8 @@
 """
-title: Multi-Model Conversation Filter - Enhanced Integration
+title: Multi-Model Conversation Filter
 description: Advanced multi-model orchestration with seamless Agent Hotswap integration and enhanced reasoning capabilities
 author: assistant & pkeffect
-version: 3.2.2
+version: 3.2.3
 required_open_webui_version: 0.5.0
 license: MIT
 """
@@ -51,6 +51,44 @@ def get_available_models() -> List[str]:
 
     # Return a sorted list for a consistent UI
     return sorted(list(models))
+
+
+def get_api_models() -> List[str]:
+    """Get API models only from OpenWebUI's app state by filtering out Ollama and workspace models."""
+    from open_webui.main import app
+    models = ["-- Select API Model --"]
+    
+    try:
+        if hasattr(app, "state") and hasattr(app.state, "MODELS"):
+            # Get all models and filter out Ollama and workspace models
+            api_models = []
+            for k in app.state.MODELS.keys():
+                if isinstance(k, str):
+                    # Skip Ollama models (contain ":" and no "/")
+                    if ":" in k and "/" not in k:
+                        continue
+                    # Skip workspace models (no ":" and no "/" and don't start with API prefixes)
+                    if (
+                        ":" not in k
+                        and "/" not in k
+                        and not k.startswith(
+                            ("gpt-", "claude-", "gemini-", "llama", "mistral")
+                        )
+                    ):
+                        continue
+                    # What's left should be API models
+                    api_models.append(k)
+            if api_models:
+                models.extend(sorted(api_models))
+                logger.info(f"[MultiModel] Loaded {len(api_models)} API models")
+            else:
+                logger.warning("[MultiModel] No API models found")
+        else:
+            logger.warning("[MultiModel] No models found in app.state.MODELS")
+    except Exception as e:
+        logger.error(f"[MultiModel] Error loading API models from app state: {e}")
+    
+    return models
 
 
 class AgentHotswapIntegration:
@@ -428,7 +466,7 @@ class ConversationManager:
         persona_config: Dict,
         reasoning_config: Dict,
     ):
-        active_models = [model for model in models if model != "-- Select Model --"]
+        active_models = [model for model in models if model != "-- Select Model --" and model != "-- Select API Model --"]
         if len(active_models) < 2:
             raise ValueError("At least 2 models must be selected")
 
@@ -467,6 +505,7 @@ class ConversationManager:
 conversation_manager = ConversationManager()
 thinking_processor = ThinkingProcessor()
 AVAILABLE_MODELS = get_available_models()
+API_MODELS = get_api_models()
 
 
 class Filter:
@@ -518,6 +557,74 @@ class Filter:
             default=1.0, ge=0.5, le=3.0, description="Seconds between responses"
         )
         response_timeout: int = Field(default=60, ge=30, le=120)
+        enable_debug: bool = Field(default=True, description="Enable debug logging")
+
+        # Enhanced reasoning settings
+        enable_reasoning: bool = Field(
+            default=True, description="Enable reasoning/thinking capabilities"
+        )
+        reasoning_effort: str = Field(
+            default="medium",
+            description="Reasoning effort level for capable models",
+            json_schema_extra={"enum": ["low", "medium", "high"]},
+        )
+        show_thinking_process: bool = Field(
+            default=True, description="Show thinking process in responses"
+        )
+
+        # Enhanced integration settings
+        enable_agent_hotswap_integration: bool = Field(
+            default=True, description="Enable Agent Hotswap integration"
+        )
+        integration_debug: bool = Field(
+            default=False, description="Debug persona integration"
+        )
+
+    class UserValves(BaseModel):
+        model_1: str = Field(
+            default=API_MODELS[0],
+            description="First API model for conversation",
+            json_schema_extra={"enum": API_MODELS},
+        )
+        model_2: str = Field(
+            default=(
+                API_MODELS[1]
+                if len(API_MODELS) > 1
+                else API_MODELS[0]
+            ),
+            description="Second API model for conversation",
+            json_schema_extra={"enum": API_MODELS},
+        )
+        model_3: str = Field(
+            default=(
+                API_MODELS[2]
+                if len(API_MODELS) > 2
+                else API_MODELS[0]
+            ),
+            description="Third API model for conversation (optional)",
+            json_schema_extra={"enum": API_MODELS},
+        )
+        model_4: str = Field(
+            default=(
+                API_MODELS[3]
+                if len(API_MODELS) > 3
+                else API_MODELS[0]
+            ),
+            description="Fourth API model for conversation (optional)",
+            json_schema_extra={"enum": API_MODELS},
+        )
+
+        max_turns_per_model: int = Field(
+            default=2, ge=1, le=5, description="Turns per model"
+        )
+        response_temperature: float = Field(default=0.7, ge=0.0, le=1.0)
+        max_tokens: int = Field(default=500, ge=50, le=2000)
+        show_persona_names: bool = Field(
+            default=True, description="Show persona names in output"
+        )
+        conversation_pace: float = Field(
+            default=1.0, ge=0.5, le=3.0, description="Seconds between responses"
+        )
         enable_debug: bool = Field(default=True, description="Enable debug logging")
 
         # Enhanced reasoning settings
@@ -763,7 +870,7 @@ IMPORTANT: You are {persona_name}. Maintain this persona throughout the conversa
 
     def _get_active_models(self) -> List[str]:
         models = [getattr(self.valves, f"model_{i}", "") for i in range(1, 5)]
-        return [m for m in models if m and m != "-- Select Model --"]
+        return [m for m in models if m and m != "-- Select Model --" and m != "-- Select API Model --"]
 
     async def _emit_status(
         self,
