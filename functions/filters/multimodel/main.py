@@ -2,7 +2,7 @@
 title: Multi-Model Conversation Filter - Enhanced Integration
 description: Advanced multi-model orchestration with seamless Agent Hotswap integration and enhanced reasoning capabilities
 author: assistant & pkeffect
-version: 3.2.1
+version: 3.2.2
 required_open_webui_version: 0.5.0
 license: MIT
 """
