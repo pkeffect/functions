@@ -3,7 +3,7 @@ title: ComfyUI Universal Filter - Combined
 version: 4.1.0
 author: pkeffect & therezz (reptar)
 author_url: https://github.com/pkeffect/
-project_url: https://github.com/pkeffect/functions/filters/comfyui_universal_filter
+project_url: https://github.com/pkeffect/functions/tree/main/functions/filters/comfyui_universal_filter
 funding_url: https://github.com/open-webui
 required_open_webui_version: 0.6.0
 date: 2025-09-27
