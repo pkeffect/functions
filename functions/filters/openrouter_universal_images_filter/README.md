@@ -771,45 +771,6 @@ jpeg_quality: 90
 
 ---
 
-## 🔄 Migration Guide
-
-### 📦 Coming from ComfyUI Filter
-
-**Key differences:**
-
-| Aspect | ComfyUI Filter | OpenRouter Filter |
-|--------|----------------|-------------------|
-| Setup | Workflow JSON, node mapping | Just API key |
-| Models | Local, self-hosted | 200+ cloud models |
-| Configuration | Workflow-specific | Model-specific |
-| Users | Shared workflow | Personal preferences |
-| Cost | Hardware | Pay-per-use |
-
-**Migration steps:**
-
-1. **Admin:** Get OpenRouter API key
-2. **Admin:** Install OpenRouter filter
-3. **Admin:** Configure API key in Valves
-4. **Users:** Choose equivalent models:
-   - ComfyUI SDXL → `stabilityai/stable-diffusion-xl`
-   - ComfyUI Flux → Check OpenRouter for Flux models
-   - Custom workflows → Find similar models on OpenRouter
-5. **Test:** Compare outputs
-6. **Transition:** Disable ComfyUI filter when satisfied
-
-**What you'll gain:**
-- ✅ No local setup/maintenance
-- ✅ Access to latest models instantly
-- ✅ Per-user customization
-- ✅ Better reliability (circuit breaker, retries)
-
-**What you'll miss:**
-- ❌ Full workflow control
-- ❌ Custom nodes
-- ❌ Free local processing
-
----
-
 ## 🚀 Roadmap & Future Features
 
 ### 🔮 Planned Enhancements
